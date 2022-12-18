@@ -1,0 +1,175 @@
+#pragma once
+
+#include <iosfwd>
+#include <mongodb/operator.h>
+#include <mongodb/polyvalue.h>
+#include <string>
+#include <vector>
+
+namespace cheasle {
+
+class BinaryExpression;
+class UnaryExpression;
+class BinaryLogicalExpression;
+class Number;
+class Block;
+class NoOp;
+class IfExpression;
+class WhileExpression;
+class BuiltInFunction;
+class FunctionCall;
+class FunctionDefinition;
+class VariableDefinition;
+class AssignmentExpression;
+class NameReference;
+
+using AST =
+    mongodb::PolyValue<BinaryExpression, BinaryLogicalExpression,
+                       UnaryExpression, Number, Block, IfExpression,
+                       WhileExpression, BuiltInFunction, FunctionDefinition,
+                       FunctionCall, VariableDefinition, AssignmentExpression,
+                       NameReference, NoOp>;
+
+enum class BinaryOperator { Add, Subtract, Multiply, Divide };
+
+class BinaryExpression : public mongodb::OpSpecificArity<AST, 2> {
+  using Base = mongodb::OpSpecificArity<AST, 2>;
+
+public:
+  BinaryExpression(AST lhs, AST rhs, BinaryOperator op)
+      : Base(std::move(lhs), std::move(rhs)), op(op) {}
+
+  const BinaryOperator op;
+};
+
+enum class UnaryOperator { Minus, Abs };
+
+class UnaryExpression : public mongodb::OpSpecificArity<AST, 1> {
+  using Base = mongodb::OpSpecificArity<AST, 1>;
+
+public:
+  UnaryExpression(AST child, UnaryOperator op)
+      : Base(std::move(child)), op(op) {}
+
+  const UnaryOperator op;
+};
+
+enum class BinaryLogicalOperator { EQ, NE, GT, GE, LT, LE };
+
+class BinaryLogicalExpression : public mongodb::OpSpecificArity<AST, 2> {
+  using Base = mongodb::OpSpecificArity<AST, 2>;
+
+public:
+  BinaryLogicalExpression(AST lhs, AST rhs, BinaryLogicalOperator op)
+      : Base(std::move(lhs), std::move(rhs)), op(op) {}
+
+  BinaryLogicalOperator op;
+};
+
+class Number : public mongodb::OpSpecificArity<AST, 0> {
+  using Base = mongodb::OpSpecificArity<AST, 0>;
+
+public:
+  explicit Number(double value) : value(value) {}
+
+  double value;
+};
+
+class Block : public mongodb::OpSpecificDynamicArity<AST, 0> {
+  using Base = mongodb::OpSpecificDynamicArity<AST, 0>;
+
+public:
+  Block(std::vector<AST> nodes) : Base(std::move(nodes)) {}
+};
+
+class IfExpression : public mongodb::OpSpecificArity<AST, 3> {
+  using Base = mongodb::OpSpecificArity<AST, 3>;
+
+public:
+  IfExpression(AST condition, AST thenBlock, AST elseBlock)
+      : Base(std::move(condition), std::move(thenBlock), std::move(elseBlock)) {
+  }
+};
+
+class WhileExpression : public mongodb::OpSpecificArity<AST, 2> {
+  using Base = mongodb::OpSpecificArity<AST, 2>;
+
+public:
+  WhileExpression(AST condition, AST block)
+      : Base(std::move(condition), std::move(block)) {}
+};
+
+enum class BuiltInFunctionId { Sqrt, Exp, Log, Print };
+
+class BuiltInFunction : public mongodb::OpSpecificDynamicArity<AST, 0> {
+  using Base = mongodb::OpSpecificDynamicArity<AST, 0>;
+
+public:
+  BuiltInFunction(BuiltInFunctionId id, std::vector<AST> arguments)
+      : Base(std::move(arguments)), id(id) {}
+
+  const BuiltInFunctionId id;
+};
+
+class FunctionDefinition : public mongodb::OpSpecificArity<AST, 1> {
+  using Base = mongodb::OpSpecificArity<AST, 1>;
+
+public:
+  FunctionDefinition(const std::string &name, AST code,
+                     std::vector<std::string> arguments)
+      : Base(std::move(code)), name(name), arguments(std::move(arguments)) {}
+
+  const std::string name;
+  std::vector<std::string> arguments;
+};
+
+class FunctionCall : public mongodb::OpSpecificDynamicArity<AST, 0> {
+  using Base = mongodb::OpSpecificDynamicArity<AST, 0>;
+
+public:
+  FunctionCall(const std::string &name, std::vector<AST> arguments)
+      : Base(std::move(arguments)), name(name) {}
+
+  const std::string name;
+};
+
+class VariableDefinition : public mongodb::OpSpecificArity<AST, 1> {
+  using Base = mongodb::OpSpecificArity<AST, 1>;
+
+public:
+  VariableDefinition(std::string name, bool isConstant, AST expr)
+      : Base(std::move(expr)), name(name), isConstant(isConstant) {}
+
+  const std::string name;
+  const bool isConstant;
+};
+
+class AssignmentExpression : public mongodb::OpSpecificArity<AST, 1> {
+  using Base = mongodb::OpSpecificArity<AST, 1>;
+
+public:
+  AssignmentExpression(std::string name, AST expr)
+      : Base(std::move(expr)), name(std::move(name)) {}
+
+  const std::string name;
+};
+
+class NameReference : public mongodb::OpSpecificArity<AST, 0> {
+public:
+  NameReference(const std::string &name) : name(name) {}
+
+  std::string name;
+};
+
+class NoOp : public mongodb::OpSpecificArity<AST, 0> {
+public:
+  NoOp() {}
+};
+
+std::ostream &operator<<(std::ostream &os, BinaryOperator op);
+std::ostream &operator<<(std::ostream &os, UnaryOperator op);
+std::ostream &operator<<(std::ostream &os, BinaryLogicalOperator op);
+std::ostream &operator<<(std::ostream &os, BuiltInFunctionId id);
+std::ostream &operator<<(std::ostream &os, const AST &ast);
+
+} // namespace cheasle
