@@ -135,10 +135,10 @@ class FunctionDefinition : public mongodb::OpSpecificArity<AST, 1> {
   using Base = mongodb::OpSpecificArity<AST, 1>;
 
 public:
-  FunctionDefinition(const std::string &name, AST code,
+  FunctionDefinition(std::string name, AST code,
                      std::vector<std::string> arguments, location location)
-      : Base(std::move(code)), name(name), arguments(std::move(arguments)),
-        location(std::move(location)) {}
+      : Base(std::move(code)), name(std::move(name)),
+        arguments(std::move(arguments)), location(std::move(location)) {}
 
   std::string name;
   std::vector<std::string> arguments;
@@ -149,9 +149,9 @@ class FunctionCall : public mongodb::OpSpecificDynamicArity<AST, 0> {
   using Base = mongodb::OpSpecificDynamicArity<AST, 0>;
 
 public:
-  FunctionCall(const std::string &name, std::vector<AST> arguments,
-               location location)
-      : Base(std::move(arguments)), name(name), location(std::move(location)) {}
+  FunctionCall(std::string name, std::vector<AST> arguments, location location)
+      : Base(std::move(arguments)), name(std::move(name)),
+        location(std::move(location)) {}
 
   std::string name;
   location location;
@@ -163,7 +163,7 @@ class VariableDefinition : public mongodb::OpSpecificArity<AST, 1> {
 public:
   VariableDefinition(std::string name, bool isConstant, AST expr,
                      location location)
-      : Base(std::move(expr)), name(name), isConstant(isConstant),
+      : Base(std::move(expr)), name(std::move(name)), isConstant(isConstant),
         location(std::move(location)) {}
 
   std::string name;
@@ -185,8 +185,8 @@ public:
 
 class NameReference : public mongodb::OpSpecificArity<AST, 0> {
 public:
-  NameReference(const std::string &name, location location)
-      : name(name), location(std::move(location)) {}
+  NameReference(std::string name, location location)
+      : name(std::move(name)), location(std::move(location)) {}
 
   std::string name;
   location location;
