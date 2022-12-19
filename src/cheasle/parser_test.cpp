@@ -32,7 +32,7 @@ TEST_CASE("addition expression", "[parser]") {
   std::string code = "5 + 10;";
   auto ast = parse(code);
 
-  auto expected = TAST::add(TAST::number(5), TAST::number(10));
+  auto expected = TAST::add(TAST::constant(5.0), TAST::constant(10.0));
 
   REQUIRE_AST(expected, ast);
 }
@@ -41,9 +41,9 @@ TEST_CASE("arithmetic expression", "[parser]") {
   std::string code = "5 - 10 * -a / |c|;";
   auto ast = parse(code);
 
-  auto mult = TAST::mul(TAST::number(10), TAST::minus(TAST::ref("a")));
+  auto mult = TAST::mul(TAST::constant(10.0), TAST::minus(TAST::ref("a")));
   auto div = TAST::div(std::move(mult), TAST::abs(TAST::ref("c")));
-  auto sub = TAST::sub(TAST::number(5), std::move(div));
+  auto sub = TAST::sub(TAST::constant(5.0), std::move(div));
 
   REQUIRE_AST(sub, ast);
 }
@@ -72,7 +72,7 @@ TEST_CASE("user function definition", "[parser]") {
   auto ast = parse(code);
 
   auto body =
-      TAST::mul(TAST::add(TAST::ref("a"), TAST::ref("b")), TAST::number(0.5));
+      TAST::mul(TAST::add(TAST::ref("a"), TAST::ref("b")), TAST::constant(0.5));
   auto expected = TAST::def("average", {"a", "b"}, TAST::b(std::move(body)));
   REQUIRE_AST(expected, ast);
 }
@@ -148,7 +148,7 @@ TEST_CASE("bultin function call", "[parser]") {
 
     auto expected =
         TAST::builtin(BuiltInFunctionId::Print,
-                      {TAST::ref("a"), TAST::number(10), TAST::ref("b")});
+                      {TAST::ref("a"), TAST::constant(10.0), TAST::ref("b")});
     REQUIRE_AST(expected, ast);
   }
 }
