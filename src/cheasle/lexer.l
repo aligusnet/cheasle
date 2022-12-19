@@ -19,9 +19,6 @@
 
 float -?([0-9]*[.])?[0-9]+
 
-/* float exponent */
-EXP     ([Ee][-+]?[0-9]+)
-
 %%
 "//".*  
 [ \t\n]  /* ignore whitespace */ 
@@ -45,7 +42,9 @@ EXP     ([Ee][-+]?[0-9]+)
 ">="    { return cheasle::Parser::make_BLOP(BinaryLogicalOperator::GE, location()); }
 "<="    { return cheasle::Parser::make_BLOP(BinaryLogicalOperator::LE, location()); }
 
-{float} { return cheasle::Parser::make_NUMBER(atof(text()), location()); }
+{float} { return cheasle::Parser::make_VALUE(atof(text()), location()); }
+"true"  { return cheasle::Parser::make_VALUE(true, location()); }
+"false"  { return cheasle::Parser::make_VALUE(false, location()); }
 
  /* keywords */
 

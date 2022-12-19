@@ -32,9 +32,9 @@ namespace cheasle { class Lexer; }
 }
 
 %define api.token.prefix {TOK_}
-%token <std::string> IDENTIFIER "identifier"  // This defines TOK_IDENTIFIER
-%token <double> NUMBER "number"               // This defines TOK_NUMBER
-%token EOF 0 "end of file"                    // This defines TOK_EOF with value 0
+%token <std::string> IDENTIFIER "identifier"
+%token <Value> VALUE "value"
+%token EOF 0 "end of file"
 %token IF THEN ELSE WHILE DO CONST LET DEF END
 %token <BuiltInFunctionId> BUILTIN;
 
@@ -80,7 +80,7 @@ exp: exp BLOP exp         { $$ = AST::make<BinaryLogicalExpression>(std::move($1
    | '|' exp '|'            { $$ = AST::make<UnaryExpression>(std::move($2), UnaryOperator::Abs, std::move(@$)); }
    |'(' exp ')'           { $$ = std::move($2); }
    | '-' exp %prec UMINUS { $$ = AST::make<UnaryExpression>(std::move($2), UnaryOperator::Minus, std::move(@$)); }
-   | NUMBER               { $$ = AST::make<Number>(std::move($1), std::move(@$)); }
+   | VALUE               { $$ = AST::make<ConstantValue>(std::move($1), std::move(@$)); }
    | IDENTIFIER           { $$ = AST::make<NameReference>(std::move($1), std::move(@$)); }
    | BUILTIN '(' explist ')' { $$ = AST::make<BuiltInFunction>(std::move($1), std::move($3), std::move(@$)); }
    | IDENTIFIER '(' explist ')' { $$ = AST::make<FunctionCall>(std::move($1), std::move($3), std::move(@$)); }
