@@ -12,7 +12,6 @@
 %define api.namespace {cheasle}
 %define api.value.type variant
 %define api.token.constructor
-%define api.value.automove
 
 %define parse.error verbose
 
@@ -20,9 +19,7 @@
 %code requires{
 #include <cheasle/driver.h>
 
-  namespace cheasle {
-    class Lexer;
-  }
+namespace cheasle { class Lexer; }
 }
 
 %parse-param {Lexer& lexer}
@@ -52,61 +49,57 @@
 %nterm <std::vector<std::string>> arglist
 %type <int> '+' '-' '*' '/'
 
-%start calclist
+%start start
 
 %%
+start: block EOF { driver->setAST(std::move($1)); }
+  | start error EOF { yyerrok; }
+;
 
-stmt: IF exp THEN block ELSE block END  { $$ = AST::make<IfExpression>(std::move($2), std::move($4), std::move($6)); }
-   | WHILE exp DO block END             { $$ = AST::make<WhileExpression>(std::move($2), std::move($4)); }
-   | DEF IDENTIFIER '(' arglist ')' '=' block END { $$ = AST::make<FunctionDefinition>($2, $7, $4);}
-   | CONST IDENTIFIER '=' stmt   { $$ = AST::make<VariableDefinition>($2, true, $4); }
-   | LET IDENTIFIER '=' stmt   { $$ = AST::make<VariableDefinition>($2, false, $4); }
-   | IDENTIFIER '=' stmt   { $$ = AST::make<AssignmentExpression>($1, $3); }
+block: /* nothing */ { $$ = AST::make<Block>(std::vector<AST>{}, std::move(@$)); }
+   | block stmt { 
+      $1.cast<Block>()->nodes().emplace_back(std::move($2));
+      $$ = std::move($1);
+  }
+;
+
+stmt: IF exp THEN block ELSE block END  { $$ = AST::make<IfExpression>(std::move($2), std::move($4), std::move($6), std::move(@$)); }
+   | WHILE exp DO block END             { $$ = AST::make<WhileExpression>(std::move($2), std::move($4), std::move(@$)); }
+   | DEF IDENTIFIER '(' arglist ')' '=' block END { $$ = AST::make<FunctionDefinition>(std::move($2), std::move($7), std::move($4), std::move(@$)); }
+   | CONST IDENTIFIER '=' stmt   { $$ = AST::make<VariableDefinition>(std::move($2), true, std::move($4), std::move(@$)); }
+   | LET IDENTIFIER '=' stmt   { $$ = AST::make<VariableDefinition>(std::move($2), false, std::move($4), std::move(@$)); }
+   | IDENTIFIER '=' stmt   { $$ = AST::make<AssignmentExpression>(std::move($1), std::move($3), std::move(@$)); }
    | exp ';'
 ;
 
-block: /* nothing */ { $$ = AST::make<Block>(std::vector<AST>{}); }
-   | block stmt { 
-                        $1.cast<Block>()->nodes().emplace_back(std::move($2));
-                        $$ = $1;
-                    }
-;
-
-exp: exp BLOP exp         { $$ = AST::make<BinaryLogicalExpression>(std::move($1), std::move($3), $2); }
-   | exp '+' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Add); }
-   | exp '-' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Subtract);}
-   | exp '*' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Multiply); }
-   | exp '/' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Divide); }
-   | '|' exp '|'            { $$ = AST::make<UnaryExpression>($2, UnaryOperator::Abs); }
-   |'(' exp ')'           { $$ = $2; }
-   | '-' exp %prec UMINUS { $$ = AST::make<UnaryExpression>($2, UnaryOperator::Minus); }
-   | NUMBER               { $$ = AST::make<Number>($1); }
-   | IDENTIFIER           { $$ = AST::make<NameReference>($1); }
-   | BUILTIN '(' explist ')' { $$ = AST::make<BuiltInFunction>($1, $3); }
-   | IDENTIFIER '(' explist ')' { $$ = AST::make<FunctionCall>($1, $3); }
+exp: exp BLOP exp         { $$ = AST::make<BinaryLogicalExpression>(std::move($1), std::move($3), $2, std::move(@$)); }
+   | exp '+' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Add, std::move(@$)); }
+   | exp '-' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Subtract, std::move(@$));}
+   | exp '*' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Multiply, std::move(@$)); }
+   | exp '/' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Divide, std::move(@$)); }
+   | '|' exp '|'            { $$ = AST::make<UnaryExpression>(std::move($2), UnaryOperator::Abs, std::move(@$)); }
+   |'(' exp ')'           { $$ = std::move($2); }
+   | '-' exp %prec UMINUS { $$ = AST::make<UnaryExpression>(std::move($2), UnaryOperator::Minus, std::move(@$)); }
+   | NUMBER               { $$ = AST::make<Number>(std::move($1), std::move(@$)); }
+   | IDENTIFIER           { $$ = AST::make<NameReference>(std::move($1), std::move(@$)); }
+   | BUILTIN '(' explist ')' { $$ = AST::make<BuiltInFunction>(std::move($1), std::move($3), std::move(@$)); }
+   | IDENTIFIER '(' explist ')' { $$ = AST::make<FunctionCall>(std::move($1), std::move($3), std::move(@$)); }
 ;
 
 explist: exp { $$ = std::vector<AST>{std::move($1)}; }
  | explist ',' exp  { $1.emplace_back(std::move($3));
-                      $$ = $1; }
+                      $$ = std::move($1); }
+;
 
 arglist: IDENTIFIER { $$ = std::vector<std::string>{std::move($1)}; }
  | arglist ',' IDENTIFIER  { $1.emplace_back(std::move($3));
-                      $$ = $1; }
-
-calclist: /* nothing */
-  | calclist block EOF {
-     driver->setAST($2);
-    }
-
-  | calclist error EOF { yyerrok; printf("> "); }
- ;
-
+                      $$ = std::move($1); }
+;
 %%
 
 void cheasle::Parser::error(const location& loc, const std::string& msg)
 {
-  std::cerr << loc << ": " << msg << std::endl;
+  driver->getErrors().append("parser", msg, loc);
   if (lexer.size() == 0)      // if token is unknown (no match)
     lexer.matcher().winput(); // skip character
 }

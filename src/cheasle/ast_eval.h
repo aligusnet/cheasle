@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cheasle/ast.h>
+#include <cheasle/error.h>
+#include <optional>
 
 namespace cheasle {
-double eval(const AST &node);
+std::optional<double> eval(const AST &node, ErrorList &errors);
 } // namespace cheasle

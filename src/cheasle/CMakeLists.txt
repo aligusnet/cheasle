@@ -1,10 +1,10 @@
 # generate files in CMAKE_CURRENT_BINARY_DIR
 add_custom_command(OUTPUT lexer.h lexer.cpp DEPENDS Reflex ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l COMMAND Reflex ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l)
-add_custom_command(OUTPUT parser.h parser.cpp DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/parser.y COMMAND bison ${CMAKE_CURRENT_SOURCE_DIR}/parser.y)
+add_custom_command(OUTPUT parser.h parser.cpp DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/parser.y COMMAND bison ${CMAKE_CURRENT_SOURCE_DIR}/parser.y "-Wcounterexamples")
 
-add_library(ChealseParser STATIC lexer.cpp parser.cpp driver.cpp symbol_table.cpp)
+add_library(ChealseParser STATIC lexer.cpp parser.cpp error.cpp)
 
-add_executable(calc_test main.cpp ast.cpp ast_eval.cpp)
+add_executable(calc_test main.cpp ast.cpp ast_eval.cpp symbol_table.cpp)
 target_link_libraries(calc_test catch2 ReflexLibStatic ChealseParser)
 
 list(APPEND INCLUDES ${CMAKE_SOURCE_DIR}/src)

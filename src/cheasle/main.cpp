@@ -1,3 +1,4 @@
+#include "cheasle/error.h"
 #include <cheasle/ast_eval.h>
 #include <iostream>
 #include <lexer.h>
@@ -20,14 +21,22 @@ void executeProgram(const std::string &program) {
   const auto &ast = driver.getAST();
   if (parser.parse() != 0) {
     std::cerr << "Failed to parse\n";
+    std::cerr << driver.getErrors();
   } else if (!ast.empty()) {
+    cheasle::ErrorList evalErrors{};
     std::cout << "AST:" << std::endl;
     std::cout << ast << std::endl;
     std::cout << "--------------------------------" << std::endl;
     std::cout << "Execution:" << std::endl;
-    auto result = eval(ast);
-    std::cout << "--------------------------------" << std::endl;
-    std::cout << "Execution result: " << result << std::endl << std::endl;
+    auto result = eval(ast, evalErrors);
+    if (evalErrors.hasErrors()) {
+      std::cerr << evalErrors;
+    }
+
+    if (result) {
+      std::cout << "--------------------------------" << std::endl;
+      std::cout << "Execution result: " << *result << std::endl << std::endl;
+    }
   }
 }
 
@@ -68,7 +77,7 @@ int main(int argc, char **argv) {
                                  "    end\n"
                                  "  end\n"
                                  "end\n"
-                                 "print( fibonacci(10) );\nÍ›"
+                                 "print( fibonacci(10) );\n"
                                  "print( fibonacci(21) );";
 
   executeProgram(testProgram);
