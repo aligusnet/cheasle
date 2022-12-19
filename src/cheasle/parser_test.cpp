@@ -1,3 +1,4 @@
+#include "ast_test_util.h"
 #include "cheasle/value.h"
 #include "mongodb/concepts.h"
 #include <Catch2/catch_amalgamated.hpp>
@@ -10,109 +11,6 @@
 
 namespace cheasle {
 namespace {
-namespace TAST {
-location loc{};
-AST number(double value) { return AST::make<ConstantValue>(value, loc); }
-AST add(AST lhs, AST rhs) {
-  return AST::make<BinaryExpression>(std::move(lhs), std::move(rhs),
-                                     BinaryOperator::Add, loc);
-}
-
-AST sub(AST lhs, AST rhs) {
-  return AST::make<BinaryExpression>(std::move(lhs), std::move(rhs),
-                                     BinaryOperator::Subtract, loc);
-}
-
-AST mul(AST lhs, AST rhs) {
-  return AST::make<BinaryExpression>(std::move(lhs), std::move(rhs),
-                                     BinaryOperator::Multiply, loc);
-}
-
-AST div(AST lhs, AST rhs) {
-  return AST::make<BinaryExpression>(std::move(lhs), std::move(rhs),
-                                     BinaryOperator::Divide, loc);
-}
-
-AST ref(std::string name) {
-  return AST::make<NameReference>(std::move(name), loc);
-}
-
-AST minus(AST child) {
-  return AST::make<UnaryExpression>(std::move(child), UnaryOperator::Minus,
-                                    loc);
-}
-
-AST abs(AST child) {
-  return AST::make<UnaryExpression>(std::move(child), UnaryOperator::Abs, loc);
-}
-
-AST ifexp(AST pred, AST thenb, AST elseb) {
-  return AST::make<IfExpression>(std::move(pred), std::move(thenb),
-                                 std::move(elseb), loc);
-}
-
-AST whileexp(AST pred, AST code) {
-  return AST::make<WhileExpression>(std::move(pred), std::move(code), loc);
-}
-
-AST lt(AST lhs, AST rhs) {
-  return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
-                                            BinaryLogicalOperator::LT, loc);
-}
-
-AST gt(AST lhs, AST rhs) {
-  return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
-                                            BinaryLogicalOperator::GT, loc);
-}
-
-AST b(AST child) { return AST::make<Block>(std::vector<AST>{child}, loc); }
-
-AST def(std::string name, ValueType returnType,
-        std::vector<FunctionArgument> args, AST code) {
-  return AST::make<FunctionDefinition>(std::move(name), returnType,
-                                       std::move(code), std::move(args), loc);
-}
-
-AST def(std::string name, std::vector<std::string> args, AST code) {
-  std::vector<FunctionArgument> arguments(args.size());
-  std::transform(args.begin(), args.end(), arguments.begin(),
-                 [](std::string name) {
-                   return FunctionArgument{std::move(name), ValueType::Double};
-                 });
-  return def(std::move(name), ValueType::Double, std::move(arguments),
-             std::move(code));
-}
-
-AST ufcall(std::string name, std::vector<AST> args) {
-  return AST::make<FunctionCall>(std::move(name), std::move(args), loc);
-}
-
-AST constexp(std::string name, ValueType type, AST expr) {
-  return AST::make<VariableDefinition>(std::move(name), type, true,
-                                       std::move(expr), loc);
-}
-
-AST constexp(std::string name, AST expr) {
-  return constexp(std::move(name), ValueType::Double, std::move(expr));
-}
-
-AST let(std::string name, ValueType type, AST expr) {
-  return AST::make<VariableDefinition>(std::move(name), type, false,
-                                       std::move(expr), loc);
-}
-
-AST let(std::string name, AST expr) {
-  return let(std::move(name), ValueType::Double, std::move(expr));
-}
-
-AST assig(std::string name, AST expr) {
-  return AST::make<AssignmentExpression>(std::move(name), std::move(expr), loc);
-}
-
-AST builtin(BuiltInFunctionId id, std::vector<AST> args) {
-  return AST::make<BuiltInFunction>(id, std::move(args), loc);
-}
-} // namespace TAST
 
 AST parse(const std::string &code) {
   Lexer lexer(code);
@@ -128,17 +26,6 @@ AST parse(const std::string &code) {
   REQUIRE(!driver.getErrors().hasErrors());
   return std::move(driver.getAST());
 }
-
-void requireAst(const AST &expected, const AST &actual) {
-  std::stringstream expectedS;
-  expectedS << TAST::b(expected);
-
-  std::stringstream actualS;
-  actualS << actual;
-
-  REQUIRE(expectedS.str() == actualS.str());
-}
-
 } // namespace
 
 TEST_CASE("addition expression", "[parser]") {
@@ -147,7 +34,7 @@ TEST_CASE("addition expression", "[parser]") {
 
   auto expected = TAST::add(TAST::number(5), TAST::number(10));
 
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("arithmetic expression", "[parser]") {
@@ -158,7 +45,7 @@ TEST_CASE("arithmetic expression", "[parser]") {
   auto div = TAST::div(std::move(mult), TAST::abs(TAST::ref("c")));
   auto sub = TAST::sub(TAST::number(5), std::move(div));
 
-  requireAst(sub, ast);
+  REQUIRE_AST(sub, ast);
 }
 
 TEST_CASE("if expression", "[parser]") {
@@ -167,7 +54,7 @@ TEST_CASE("if expression", "[parser]") {
 
   auto expected = TAST::ifexp(TAST::lt(TAST::ref("a"), TAST::ref("b")),
                               TAST::b(TAST::ref("c")), TAST::b(TAST::ref("d")));
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("while expression", "[parser]") {
@@ -176,7 +63,7 @@ TEST_CASE("while expression", "[parser]") {
 
   auto expected = TAST::whileexp(TAST::gt(TAST::ref("a"), TAST::ref("b")),
                                  TAST::b(TAST::ref("c")));
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("user function definition", "[parser]") {
@@ -187,7 +74,7 @@ TEST_CASE("user function definition", "[parser]") {
   auto body =
       TAST::mul(TAST::add(TAST::ref("a"), TAST::ref("b")), TAST::number(0.5));
   auto expected = TAST::def("average", {"a", "b"}, TAST::b(std::move(body)));
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("user function cal", "[parser]") {
@@ -195,7 +82,7 @@ TEST_CASE("user function cal", "[parser]") {
   auto ast = parse(code);
 
   auto expected = TAST::ufcall("average", {TAST::ref("a"), TAST::ref("b")});
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("const declaration", "[parser]") {
@@ -203,7 +90,7 @@ TEST_CASE("const declaration", "[parser]") {
   auto ast = parse(code);
 
   auto expected = TAST::constexp("a", TAST::ref("b"));
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("variable declaration", "[parser]") {
@@ -211,7 +98,7 @@ TEST_CASE("variable declaration", "[parser]") {
   auto ast = parse(code);
 
   auto expected = TAST::let("a", ValueType::Boolean, TAST::ref("b"));
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("assignment", "[parser]") {
@@ -219,7 +106,7 @@ TEST_CASE("assignment", "[parser]") {
   auto ast = parse(code);
 
   auto expected = TAST::assig("a", TAST::ref("b"));
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("variable reference", "[parser]") {
@@ -227,7 +114,7 @@ TEST_CASE("variable reference", "[parser]") {
   auto ast = parse(code);
 
   auto expected = TAST::ref("a");
-  requireAst(expected, ast);
+  REQUIRE_AST(expected, ast);
 }
 
 TEST_CASE("bultin function call", "[parser]") {
@@ -236,7 +123,7 @@ TEST_CASE("bultin function call", "[parser]") {
     auto ast = parse(code);
 
     auto expected = TAST::builtin(BuiltInFunctionId::Sqrt, {TAST::ref("a")});
-    requireAst(expected, ast);
+    REQUIRE_AST(expected, ast);
   }
 
   SECTION("exp") {
@@ -244,7 +131,7 @@ TEST_CASE("bultin function call", "[parser]") {
     auto ast = parse(code);
 
     auto expected = TAST::builtin(BuiltInFunctionId::Exp, {TAST::ref("a")});
-    requireAst(expected, ast);
+    REQUIRE_AST(expected, ast);
   }
 
   SECTION("log") {
@@ -252,7 +139,7 @@ TEST_CASE("bultin function call", "[parser]") {
     auto ast = parse(code);
 
     auto expected = TAST::builtin(BuiltInFunctionId::Log, {TAST::ref("a")});
-    requireAst(expected, ast);
+    REQUIRE_AST(expected, ast);
   }
 
   SECTION("print") {
@@ -262,7 +149,7 @@ TEST_CASE("bultin function call", "[parser]") {
     auto expected =
         TAST::builtin(BuiltInFunctionId::Print,
                       {TAST::ref("a"), TAST::number(10), TAST::ref("b")});
-    requireAst(expected, ast);
+    REQUIRE_AST(expected, ast);
   }
 }
 } // namespace cheasle
