@@ -5,5 +5,5 @@
 #include <optional>
 
 namespace cheasle {
-std::optional<double> eval(const AST &node, ErrorList &errors);
+std::optional<Value> eval(const AST &node, ErrorList &errors);
 } // namespace cheasle

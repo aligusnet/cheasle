@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cheasle/ast.h>
+#include <cheasle/value.h>
 #include <list>
 #include <optional>
 #include <string>
@@ -11,7 +12,7 @@
 namespace cheasle {
 
 struct ValueInfo {
-  double value;
+  Value value;
   bool isConstant;
 };
 
@@ -37,13 +38,13 @@ public:
     _table[name].data = val;
   }
 
-  bool assign(const std::string &name, double value);
+  bool assign(const std::string &name, Value value);
 
   bool isDefined(const std::string &name) const {
     return _table.contains(name);
   }
 
-  std::optional<double> getValue(const std::string &name) const;
+  std::optional<Value> getValue(const std::string &name) const;
 
   std::optional<UserFunction> getFunction(const std::string &name) const;
 

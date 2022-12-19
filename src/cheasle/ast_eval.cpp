@@ -3,21 +3,41 @@
 #include "cheasle/symbol_table.h"
 #include "location.h"
 #include <iostream>
+#include <optional>
 #include <sstream>
 
 namespace cheasle {
+namespace {
+
+std::optional<bool> getBool(const std::optional<Value> &val) {
+  if (val.has_value() && std::get_if<bool>(&val.value()) != nullptr) {
+    return std::get<bool>(*val);
+  }
+
+  return std::nullopt;
+}
+
+std::optional<double> getDouble(const std::optional<Value> &val) {
+  if (val.has_value() && std::get_if<double>(&val.value()) != nullptr) {
+    return std::get<double>(*val);
+  }
+
+  return std::nullopt;
+}
 
 struct EvalWalker {
-
   EvalWalker(SymbolTable symbolTable, ErrorList &errors)
       : _symbolTable(std::move(symbolTable)), _errors(errors) {}
 
-  std::optional<double> operator()(const AST &, const BinaryExpression &node) {
-    auto lhs = node.get<0>().visit(*this);
-    auto rhs = node.get<1>().visit(*this);
+  std::optional<Value> operator()(const AST &, const BinaryExpression &node) {
+    auto lhs = getDouble(node.get<0>().visit(*this));
+    auto rhs = getDouble(node.get<1>().visit(*this));
     if (!lhs || !rhs) {
+      error("Binary expression expects both arguments of type double",
+            node.location);
       return std::nullopt;
     }
+
     switch (node.op) {
     case BinaryOperator::Add:
       return *lhs + *rhs;
@@ -33,36 +53,40 @@ struct EvalWalker {
     return std::nullopt;
   }
 
-  std::optional<double> operator()(const AST &ast,
-                                   const BinaryLogicalExpression &node) {
-    auto lhs = node.get<0>().visit(*this);
-    auto rhs = node.get<1>().visit(*this);
+  std::optional<Value> operator()(const AST &ast,
+                                  const BinaryLogicalExpression &node) {
+    auto lhs = getDouble(node.get<0>().visit(*this));
+    auto rhs = getDouble(node.get<1>().visit(*this));
     if (!lhs || !rhs) {
+      error("Binary logical expression expects both arguments of type double",
+            node.location);
       return std::nullopt;
     }
 
     switch (node.op) {
     case BinaryLogicalOperator::EQ:
-      return *lhs == *rhs ? 1.0 : -1.0;
+      return *lhs == *rhs;
     case BinaryLogicalOperator::NE:
-      return *lhs != *rhs ? 1.0 : -1.0;
+      return *lhs != *rhs;
     case BinaryLogicalOperator::GT:
-      return *lhs > *rhs ? 1.0 : -1.0;
+      return *lhs > *rhs;
     case BinaryLogicalOperator::GE:
-      return *lhs >= *rhs ? 1.0 : -1.0;
+      return *lhs >= *rhs;
     case BinaryLogicalOperator::LT:
-      return *lhs < *rhs ? 1.0 : -1.0;
+      return *lhs < *rhs;
     case BinaryLogicalOperator::LE:
-      return *lhs <= *rhs ? 1.0 : -1.0;
+      return *lhs <= *rhs;
     }
 
     error("Unkwnown boolean operator", node.location);
     return std::nullopt;
   }
 
-  std::optional<double> operator()(const AST &, const UnaryExpression &node) {
-    auto value = node.get<0>().visit(*this);
+  std::optional<Value> operator()(const AST &, const UnaryExpression &node) {
+    auto value = getDouble(node.get<0>().visit(*this));
     if (!value) {
+      error("Unary operator expects one argument of type double.",
+            node.location);
       return std::nullopt;
     }
 
@@ -77,14 +101,12 @@ struct EvalWalker {
     return std::nullopt;
   }
 
-  std::optional<double> operator()(const AST &, const Number &node) {
+  std::optional<Value> operator()(const AST &, const ConstantValue &node) {
     return node.value;
   }
 
-  std::optional<double> operator()(const AST &, const NoOp &) { return 0.0; }
-
-  std::optional<double> operator()(const AST &, const Block &node) {
-    std::optional<double> value = 0;
+  std::optional<Value> operator()(const AST &, const Block &node) {
+    std::optional<Value> value = 0.0;
     for (const auto &child : node.nodes()) {
       value = child.visit(*this);
       if (!value) {
@@ -95,25 +117,27 @@ struct EvalWalker {
     return value;
   }
 
-  std::optional<double> operator()(const AST &, const IfExpression &node) {
-    auto value = node.get<0>().visit(*this);
+  std::optional<Value> operator()(const AST &, const IfExpression &node) {
+    auto value = getBool(node.get<0>().visit(*this));
     if (!value) {
+      error("<If> expects a predicate to be a boolean.", node.location);
       return std::nullopt;
     }
 
-    if (*value > 0) {
+    if (*value) {
       return node.get<1>().visit(*this);
     } else {
       return node.get<2>().visit(*this);
     }
   }
 
-  std::optional<double> operator()(const AST &, const WhileExpression &node) {
+  std::optional<Value> operator()(const AST &, const WhileExpression &node) {
     const auto &pred = node.get<0>();
     const auto &body = node.get<1>();
-    std::optional<double> value = 0;
-    std::optional<double> predValue;
-    while ((predValue = pred.visit(*this)), predValue && *predValue > 0) {
+    std::optional<Value> value = 0.0;
+    std::optional<Value> predValue;
+
+    while (getBool(pred.visit(*this)).value_or(false)) {
       value = body.visit(*this);
       if (!value) {
         return std::nullopt;
@@ -122,7 +146,7 @@ struct EvalWalker {
     return value;
   }
 
-  std::optional<double> operator()(const AST &, const BuiltInFunction &node) {
+  std::optional<Value> operator()(const AST &, const BuiltInFunction &node) {
     switch (node.id) {
     case BuiltInFunctionId::Exp:
       return callExp(node.nodes(), node.location);
@@ -138,13 +162,12 @@ struct EvalWalker {
     return std::nullopt;
   }
 
-  std::optional<double> operator()(const AST &,
-                                   const FunctionDefinition &node) {
+  std::optional<Value> operator()(const AST &, const FunctionDefinition &node) {
     _symbolTable.define(node.name, UserFunction{node.get<0>(), node.arguments});
-    return 0;
+    return 0.0;
   }
 
-  std::optional<double> operator()(const AST &, const FunctionCall &node) {
+  std::optional<Value> operator()(const AST &, const FunctionCall &node) {
     auto funcOpt = _symbolTable.getFunction(node.name);
     if (!funcOpt) {
       error("Unknown function " + node.name, node.location);
@@ -177,8 +200,7 @@ struct EvalWalker {
     return funcOpt->code.visit(eval);
   }
 
-  std::optional<double> operator()(const AST &,
-                                   const VariableDefinition &node) {
+  std::optional<Value> operator()(const AST &, const VariableDefinition &node) {
     if (_symbolTable.isDefined(node.name)) {
       error("Variable " + node.name +
                 " is already defined in the current scope.",
@@ -194,8 +216,8 @@ struct EvalWalker {
     return value;
   }
 
-  std::optional<double> operator()(const AST &,
-                                   const AssignmentExpression &node) {
+  std::optional<Value> operator()(const AST &,
+                                  const AssignmentExpression &node) {
     auto value = node.get<0>().visit(*this);
     if (!value) {
       return std::nullopt;
@@ -211,7 +233,7 @@ struct EvalWalker {
     return value;
   }
 
-  std::optional<double> operator()(const AST &, const NameReference &node) {
+  std::optional<Value> operator()(const AST &, const NameReference &node) {
     auto value = _symbolTable.getValue(node.name);
     if (value) {
       return *value;
@@ -221,13 +243,15 @@ struct EvalWalker {
     }
   }
 
-  std::optional<double> callExp(const std::vector<AST> arguments,
-                                const location &location) {
+  std::optional<Value> callExp(const std::vector<AST> arguments,
+                               const location &location) {
     if (arguments.size() == 1) {
-      auto value = arguments[0].visit(*this);
+      auto value = getDouble(arguments[0].visit(*this));
       if (!value) {
         return std::nullopt;
+        error("Bultin function <exp> expects 1 double argument", location);
       }
+
       return exp(*value);
     }
 
@@ -235,11 +259,12 @@ struct EvalWalker {
     return std::nullopt;
   }
 
-  std::optional<double> callLog(const std::vector<AST> arguments,
-                                const location &location) {
+  std::optional<Value> callLog(const std::vector<AST> arguments,
+                               const location &location) {
     if (arguments.size() == 1) {
-      auto value = arguments[0].visit(*this);
+      auto value = getDouble(arguments[0].visit(*this));
       if (!value) {
+        error("Bultin function <log> expects 1 double argument", location);
         return std::nullopt;
       }
       return log(*value);
@@ -249,9 +274,9 @@ struct EvalWalker {
     return std::nullopt;
   }
 
-  std::optional<double> callPrint(const std::vector<AST> arguments,
-                                  const location &location) {
-    std::optional<double> value = 0;
+  std::optional<Value> callPrint(const std::vector<AST> arguments,
+                                 const location &location) {
+    std::optional<Value> value = 0.0;
     std::cout << "out:";
     for (const auto &arg : arguments) {
       value = arg.visit(*this);
@@ -266,11 +291,12 @@ struct EvalWalker {
     return value;
   }
 
-  std::optional<double> callSqrt(const std::vector<AST> arguments,
-                                 const location &location) {
+  std::optional<Value> callSqrt(const std::vector<AST> arguments,
+                                const location &location) {
     if (arguments.size() == 1) {
-      auto value = arguments[0].visit(*this);
+      auto value = getDouble(arguments[0].visit(*this));
       if (!value) {
+        error("Bultin function <sqrt> expects 1 double argument", location);
         return std::nullopt;
       }
 
@@ -288,8 +314,9 @@ struct EvalWalker {
   SymbolTable _symbolTable;
   ErrorList &_errors;
 };
+} // namespace
 
-std::optional<double> eval(const AST &node, ErrorList &errors) {
+std::optional<Value> eval(const AST &node, ErrorList &errors) {
   SymbolTable symbolTable{};
   EvalWalker ew{std::move(symbolTable), errors};
   return node.visit(ew);

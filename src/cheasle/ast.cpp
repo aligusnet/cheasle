@@ -30,7 +30,7 @@ struct ASTPrinter {
     _os << ')';
   }
 
-  void operator()(const AST &, const Number &node) { _os << node.value; }
+  void operator()(const AST &, const ConstantValue &node) { _os << node.value; }
 
   void operator()(const AST &, const Block &node) {
     _indent += 2;
@@ -41,8 +41,6 @@ struct ASTPrinter {
     }
     _indent -= 2;
   }
-
-  void operator()(const AST &, const NoOp &node) {}
 
   void operator()(const AST &, const IfExpression &node) {
     _os << "if ";

@@ -7,7 +7,7 @@
 using Catch::Matchers::WithinRel;
 namespace cheasle {
 
-double execute(const std::string &code, bool trace = false) {
+Value execute(const std::string &code, bool trace = false) {
   if (trace) {
     std::cout << "********************************" << std::endl;
     std::cout << "Building and executing program: " << std::endl;
@@ -73,7 +73,7 @@ TEST_CASE("Fibinacci sequnce", "[integration]") {
                      "end\n"
                      "fibonacci(21);\n";
   auto result = execute(code, false);
-  REQUIRE_THAT(result, WithinRel(10946.0, 1e-8));
+  REQUIRE_THAT(std::get<double>(result), WithinRel(10946.0, 1e-8));
 }
 
 TEST_CASE("Sqrt", "[integration]") {
@@ -90,7 +90,7 @@ TEST_CASE("Sqrt", "[integration]") {
                      "const arg = 171;\n"
                      "mySqrt(arg);\n";
   auto result = execute(code, false);
-  REQUIRE_THAT(result, WithinRel(sqrt(171.0), 1e-4));
+  REQUIRE_THAT(std::get<double>(result), WithinRel(sqrt(171.0), 1e-4));
 }
 
 }; // namespace cheasle

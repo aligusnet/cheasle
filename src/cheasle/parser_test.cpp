@@ -11,7 +11,7 @@ namespace cheasle {
 namespace {
 namespace TAST {
 location loc{};
-AST number(double value) { return AST::make<Number>(value, loc); }
+AST number(double value) { return AST::make<ConstantValue>(value, loc); }
 AST add(AST lhs, AST rhs) {
   return AST::make<BinaryExpression>(std::move(lhs), std::move(rhs),
                                      BinaryOperator::Add, loc);

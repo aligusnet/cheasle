@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cheasle/value.h>
 #include <iosfwd>
 #include <location.h>
 #include <mongodb/operator.h>
@@ -12,9 +13,8 @@ namespace cheasle {
 class BinaryExpression;
 class UnaryExpression;
 class BinaryLogicalExpression;
-class Number;
+class ConstantValue;
 class Block;
-class NoOp;
 class IfExpression;
 class WhileExpression;
 class BuiltInFunction;
@@ -24,12 +24,10 @@ class VariableDefinition;
 class AssignmentExpression;
 class NameReference;
 
-using AST =
-    mongodb::PolyValue<BinaryExpression, BinaryLogicalExpression,
-                       UnaryExpression, Number, Block, IfExpression,
-                       WhileExpression, BuiltInFunction, FunctionDefinition,
-                       FunctionCall, VariableDefinition, AssignmentExpression,
-                       NameReference, NoOp>;
+using AST = mongodb::PolyValue<
+    BinaryExpression, BinaryLogicalExpression, UnaryExpression, ConstantValue,
+    Block, IfExpression, WhileExpression, BuiltInFunction, FunctionDefinition,
+    FunctionCall, VariableDefinition, AssignmentExpression, NameReference>;
 
 enum class BinaryOperator { Add, Subtract, Multiply, Divide };
 
@@ -73,14 +71,14 @@ public:
   location location;
 };
 
-class Number : public mongodb::OpSpecificArity<AST, 0> {
+class ConstantValue : public mongodb::OpSpecificArity<AST, 0> {
   using Base = mongodb::OpSpecificArity<AST, 0>;
 
 public:
-  explicit Number(double value, location location)
-      : value(value), location(std::move(location)) {}
+  explicit ConstantValue(Value value, location location)
+      : value(std::move(value)), location(std::move(location)) {}
 
-  double value;
+  Value value;
   location location;
 };
 
@@ -190,11 +188,6 @@ public:
 
   std::string name;
   location location;
-};
-
-class NoOp : public mongodb::OpSpecificArity<AST, 0> {
-public:
-  NoOp() {}
 };
 
 std::ostream &operator<<(std::ostream &os, BinaryOperator op);

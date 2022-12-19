@@ -3,7 +3,7 @@
 
 namespace cheasle {
 
-bool SymbolTable::assign(const std::string &name, double value) {
+bool SymbolTable::assign(const std::string &name, Value value) {
   auto itopt = find(name);
   if (itopt) {
     const auto &it = *itopt;
@@ -18,7 +18,7 @@ bool SymbolTable::assign(const std::string &name, double value) {
   return false;
 }
 
-std::optional<double> SymbolTable::getValue(const std::string &name) const {
+std::optional<Value> SymbolTable::getValue(const std::string &name) const {
   auto itopt = find(name);
   if (itopt) {
     const auto &it = *itopt;
