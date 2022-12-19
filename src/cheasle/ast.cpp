@@ -79,9 +79,9 @@ struct ASTPrinter {
       if (&arg != &node.arguments.front()) {
         _os << ", ";
       }
-      _os << arg;
+      _os << arg.name << ": " << arg.type;
     }
-    _os << ')' << std::endl;
+    _os << "): " << node.returnType << std::endl;
     node.get<0>().visit(*this);
   }
 
@@ -97,7 +97,8 @@ struct ASTPrinter {
   }
 
   void operator()(const AST &, const VariableDefinition &node) {
-    _os << (node.isConstant ? "const " : "let ") << node.name << " = ";
+    _os << (node.isConstant ? "const " : "let ") << node.name << ": "
+        << node.type << " = ";
     node.get<0>().visit(*this);
   }
 

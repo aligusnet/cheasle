@@ -163,7 +163,9 @@ struct EvalWalker {
   }
 
   std::optional<Value> operator()(const AST &, const FunctionDefinition &node) {
-    _symbolTable.define(node.name, UserFunction{node.get<0>(), node.arguments});
+    _symbolTable.define(
+        node.name,
+        FunctionSymbol{node.returnType, node.arguments, node.get<0>()});
     return 0.0;
   }
 
@@ -180,20 +182,19 @@ struct EvalWalker {
       return std::nullopt;
     }
 
-    std::vector<ValueInfo> values;
+    std::vector<ValueSymbol> values;
     values.reserve(node.nodes().size());
-
-    for (const auto &arg : node.nodes()) {
-      auto value = arg.visit(*this);
-      if (!value) {
-        return std::nullopt;
-      }
-      values.emplace_back(ValueInfo{*value, false});
-    }
 
     SymbolTable childTable{&_symbolTable};
     for (size_t i = 0; i < funcOpt->arguments.size(); ++i) {
-      childTable.define(funcOpt->arguments[i], values[i]);
+      auto value = node.nodes()[i].visit(*this);
+      if (!value) {
+        return std::nullopt;
+      }
+
+      values.emplace_back();
+      childTable.define(funcOpt->arguments[i].name,
+                        ValueSymbol{funcOpt->arguments[i].type, *value, false});
     }
 
     EvalWalker eval{childTable, _errors};
@@ -212,7 +213,8 @@ struct EvalWalker {
     if (!value) {
       return std::nullopt;
     }
-    _symbolTable.define(node.name, ValueInfo{*value, node.isConstant});
+    _symbolTable.define(node.name,
+                        ValueSymbol{node.type, *value, node.isConstant});
     return value;
   }
 

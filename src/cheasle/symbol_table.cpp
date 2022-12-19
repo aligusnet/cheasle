@@ -7,7 +7,7 @@ bool SymbolTable::assign(const std::string &name, Value value) {
   auto itopt = find(name);
   if (itopt) {
     const auto &it = *itopt;
-    if (auto *val = std::get_if<ValueInfo>(&it->second.data)) {
+    if (auto *val = std::get_if<ValueSymbol>(&it->second.data)) {
       if (!val->isConstant) {
         val->value = value;
         return true;
@@ -22,7 +22,7 @@ std::optional<Value> SymbolTable::getValue(const std::string &name) const {
   auto itopt = find(name);
   if (itopt) {
     const auto &it = *itopt;
-    if (const auto *val = std::get_if<ValueInfo>(&it->second.data)) {
+    if (const auto *val = std::get_if<ValueSymbol>(&it->second.data)) {
       return val->value;
     }
   }
@@ -30,12 +30,12 @@ std::optional<Value> SymbolTable::getValue(const std::string &name) const {
   return std::nullopt;
 }
 
-std::optional<UserFunction>
+std::optional<FunctionSymbol>
 SymbolTable::getFunction(const std::string &name) const {
   auto itopt = find(name);
   if (itopt) {
     const auto &it = *itopt;
-    if (const auto *func = std::get_if<UserFunction>(&it->second.data)) {
+    if (const auto *func = std::get_if<FunctionSymbol>(&it->second.data)) {
       return *func;
     }
   }

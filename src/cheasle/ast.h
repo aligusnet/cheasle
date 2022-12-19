@@ -129,17 +129,23 @@ public:
   BuiltInFunctionId id;
 };
 
+struct FunctionArgument {
+  std::string name;
+  ValueType type;
+};
+
 class FunctionDefinition : public mongodb::OpSpecificArity<AST, 1> {
   using Base = mongodb::OpSpecificArity<AST, 1>;
 
 public:
-  FunctionDefinition(std::string name, AST code,
-                     std::vector<std::string> arguments, location location)
-      : Base(std::move(code)), name(std::move(name)),
+  FunctionDefinition(std::string name, ValueType returnType, AST code,
+                     std::vector<FunctionArgument> arguments, location location)
+      : Base(std::move(code)), name(std::move(name)), returnType(returnType),
         arguments(std::move(arguments)), location(std::move(location)) {}
 
   std::string name;
-  std::vector<std::string> arguments;
+  ValueType returnType;
+  std::vector<FunctionArgument> arguments;
   location location;
 };
 
@@ -159,12 +165,13 @@ class VariableDefinition : public mongodb::OpSpecificArity<AST, 1> {
   using Base = mongodb::OpSpecificArity<AST, 1>;
 
 public:
-  VariableDefinition(std::string name, bool isConstant, AST expr,
-                     location location)
-      : Base(std::move(expr)), name(std::move(name)), isConstant(isConstant),
-        location(std::move(location)) {}
+  VariableDefinition(std::string name, ValueType type, bool isConstant,
+                     AST expr, location location)
+      : Base(std::move(expr)), name(std::move(name)), type(type),
+        isConstant(isConstant), location(std::move(location)) {}
 
   std::string name;
+  ValueType type;
   bool isConstant;
   location location;
 };

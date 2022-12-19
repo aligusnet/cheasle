@@ -1,3 +1,4 @@
+#include "cheasle/value.h"
 #include "mongodb/concepts.h"
 #include <Catch2/catch_amalgamated.hpp>
 #include <cheasle/ast.h>
@@ -66,23 +67,42 @@ AST gt(AST lhs, AST rhs) {
 
 AST b(AST child) { return AST::make<Block>(std::vector<AST>{child}, loc); }
 
+AST def(std::string name, ValueType returnType,
+        std::vector<FunctionArgument> args, AST code) {
+  return AST::make<FunctionDefinition>(std::move(name), returnType,
+                                       std::move(code), std::move(args), loc);
+}
+
 AST def(std::string name, std::vector<std::string> args, AST code) {
-  return AST::make<FunctionDefinition>(std::move(name), std::move(code),
-                                       std::move(args), loc);
+  std::vector<FunctionArgument> arguments(args.size());
+  std::transform(args.begin(), args.end(), arguments.begin(),
+                 [](std::string name) {
+                   return FunctionArgument{std::move(name), ValueType::Double};
+                 });
+  return def(std::move(name), ValueType::Double, std::move(arguments),
+             std::move(code));
 }
 
 AST ufcall(std::string name, std::vector<AST> args) {
   return AST::make<FunctionCall>(std::move(name), std::move(args), loc);
 }
 
+AST constexp(std::string name, ValueType type, AST expr) {
+  return AST::make<VariableDefinition>(std::move(name), type, true,
+                                       std::move(expr), loc);
+}
+
 AST constexp(std::string name, AST expr) {
-  return AST::make<VariableDefinition>(std::move(name), true, std::move(expr),
-                                       loc);
+  return constexp(std::move(name), ValueType::Double, std::move(expr));
+}
+
+AST let(std::string name, ValueType type, AST expr) {
+  return AST::make<VariableDefinition>(std::move(name), type, false,
+                                       std::move(expr), loc);
 }
 
 AST let(std::string name, AST expr) {
-  return AST::make<VariableDefinition>(std::move(name), false, std::move(expr),
-                                       loc);
+  return let(std::move(name), ValueType::Double, std::move(expr));
 }
 
 AST assig(std::string name, AST expr) {
@@ -160,7 +180,8 @@ TEST_CASE("while expression", "[parser]") {
 }
 
 TEST_CASE("user function definition", "[parser]") {
-  std::string code = "def average(a, b) = (a + b) * 0.5; end";
+  std::string code =
+      "def average(a: double, b: double) : double = (a + b) * 0.5; end";
   auto ast = parse(code);
 
   auto body =
@@ -178,7 +199,7 @@ TEST_CASE("user function cal", "[parser]") {
 }
 
 TEST_CASE("const declaration", "[parser]") {
-  std::string code = "const a = b;";
+  std::string code = "const a: double = b;";
   auto ast = parse(code);
 
   auto expected = TAST::constexp("a", TAST::ref("b"));
@@ -186,10 +207,10 @@ TEST_CASE("const declaration", "[parser]") {
 }
 
 TEST_CASE("variable declaration", "[parser]") {
-  std::string code = "let a = b;";
+  std::string code = "let a: bool = b;";
   auto ast = parse(code);
 
-  auto expected = TAST::let("a", TAST::ref("b"));
+  auto expected = TAST::let("a", ValueType::Boolean, TAST::ref("b"));
   requireAst(expected, ast);
 }
 

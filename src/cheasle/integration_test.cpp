@@ -59,8 +59,8 @@ Value execute(const std::string &code, bool trace = false) {
   return *result;
 }
 
-TEST_CASE("Fibinacci sequnce", "[integration]") {
-  std::string code = "def fibonacci(n) = \n"
+TEST_CASE("Fibonacci sequnce", "[integration]") {
+  std::string code = "def fibonacci(n: double): double = \n"
                      "  if n == 0 then\n"
                      "    0;\n"
                      "  else\n"
@@ -77,18 +77,19 @@ TEST_CASE("Fibinacci sequnce", "[integration]") {
 }
 
 TEST_CASE("Sqrt", "[integration]") {
-  std::string code = "def mySqrt(n) = \n"
-                     "  def average(a,b) = (a+b)/2; end\n"
-                     "  const eps = 0.0001;\n"
-                     "  let e=1;\n"
-                     "  let t=n;\n"
-                     "  while |t - e| > eps do\n"
-                     "    t = n / e;\n"
-                     "    e = average(e, t);\n"
-                     "  end\n"
-                     "end\n"
-                     "const arg = 171;\n"
-                     "mySqrt(arg);\n";
+  std::string code =
+      "def mySqrt(n: double) : double = \n"
+      "  def average(a: double, b: double) : double = (a+b)/2; end\n"
+      "  const eps: double = 0.0001;\n"
+      "  let e: double = 1;\n"
+      "  let t: double = n;\n"
+      "  while |t - e| > eps do\n"
+      "    t = n / e;\n"
+      "    e = average(e, t);\n"
+      "  end\n"
+      "end\n"
+      "const arg: double = 171;\n"
+      "mySqrt(arg);\n";
   auto result = execute(code, false);
   REQUIRE_THAT(std::get<double>(result), WithinRel(sqrt(171.0), 1e-4));
 }

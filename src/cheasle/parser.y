@@ -34,9 +34,10 @@ namespace cheasle { class Lexer; }
 %define api.token.prefix {TOK_}
 %token <std::string> IDENTIFIER "identifier"
 %token <Value> VALUE "value"
+%token <ValueType> VALUE_TYPE "value type"
+%token <BuiltInFunctionId> BUILTIN "built-in function"
 %token EOF 0 "end of file"
 %token IF THEN ELSE WHILE DO CONST LET DEF END
-%token <BuiltInFunctionId> BUILTIN;
 
 %nonassoc <BinaryLogicalOperator> BLOP
 %right '='
@@ -46,7 +47,7 @@ namespace cheasle { class Lexer; }
 
 %nterm <AST> exp stmt block
 %nterm <std::vector<AST>> explist
-%nterm <std::vector<std::string>> arglist
+%nterm <std::vector<FunctionArgument>> arglist
 %type <int> '+' '-' '*' '/'
 
 %start start
@@ -65,9 +66,9 @@ block: /* nothing */ { $$ = AST::make<Block>(std::vector<AST>{}, std::move(@$));
 
 stmt: IF exp THEN block ELSE block END  { $$ = AST::make<IfExpression>(std::move($2), std::move($4), std::move($6), std::move(@$)); }
    | WHILE exp DO block END             { $$ = AST::make<WhileExpression>(std::move($2), std::move($4), std::move(@$)); }
-   | DEF IDENTIFIER '(' arglist ')' '=' block END { $$ = AST::make<FunctionDefinition>(std::move($2), std::move($7), std::move($4), std::move(@$)); }
-   | CONST IDENTIFIER '=' stmt   { $$ = AST::make<VariableDefinition>(std::move($2), true, std::move($4), std::move(@$)); }
-   | LET IDENTIFIER '=' stmt   { $$ = AST::make<VariableDefinition>(std::move($2), false, std::move($4), std::move(@$)); }
+   | DEF IDENTIFIER '(' arglist ')' ':' VALUE_TYPE '=' block END { $$ = AST::make<FunctionDefinition>(std::move($2), $7, std::move($9), std::move($4), std::move(@$)); }
+   | CONST IDENTIFIER ':' VALUE_TYPE '=' stmt   { $$ = AST::make<VariableDefinition>(std::move($2), $4, true, std::move($6), std::move(@$)); }
+   | LET IDENTIFIER  ':' VALUE_TYPE '=' stmt   { $$ = AST::make<VariableDefinition>(std::move($2), $4, false, std::move($6), std::move(@$)); }
    | IDENTIFIER '=' stmt   { $$ = AST::make<AssignmentExpression>(std::move($1), std::move($3), std::move(@$)); }
    | exp ';'
 ;
@@ -91,8 +92,8 @@ explist: exp { $$ = std::vector<AST>{std::move($1)}; }
                       $$ = std::move($1); }
 ;
 
-arglist: IDENTIFIER { $$ = std::vector<std::string>{std::move($1)}; }
- | arglist ',' IDENTIFIER  { $1.emplace_back(std::move($3));
+arglist: IDENTIFIER ':' VALUE_TYPE { $$ = std::vector<FunctionArgument>{FunctionArgument{std::move($1), $3}}; }
+ | arglist ',' IDENTIFIER ':' VALUE_TYPE { $1.emplace_back(FunctionArgument{std::move($3), $5});
                       $$ = std::move($1); }
 ;
 %%

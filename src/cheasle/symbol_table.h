@@ -11,31 +11,33 @@
 
 namespace cheasle {
 
-struct ValueInfo {
+struct ValueSymbol {
+  ValueType type;
   Value value;
   bool isConstant;
 };
 
-struct UserFunction {
+struct FunctionSymbol {
+  ValueType returnType;
+  std::vector<FunctionArgument> arguments;
   AST code;
-  std::vector<std::string> arguments;
 };
 
 // value or user function
 struct SymbolData {
-  std::variant<ValueInfo, UserFunction> data;
+  std::variant<ValueSymbol, FunctionSymbol> data;
 };
 
 class SymbolTable {
 public:
   explicit SymbolTable(SymbolTable *parent = nullptr) : _parent(parent) {}
 
-  void define(const std::string &name, UserFunction func) {
+  void define(const std::string &name, FunctionSymbol func) {
     _table[name].data = std::move(func);
   }
 
-  void define(const std::string &name, ValueInfo val) {
-    _table[name].data = val;
+  void define(const std::string &name, ValueSymbol val) {
+    _table[name].data = std::move(val);
   }
 
   bool assign(const std::string &name, Value value);
@@ -46,7 +48,7 @@ public:
 
   std::optional<Value> getValue(const std::string &name) const;
 
-  std::optional<UserFunction> getFunction(const std::string &name) const;
+  std::optional<FunctionSymbol> getFunction(const std::string &name) const;
 
 private:
   using Table = std::unordered_map<std::string, SymbolData>;

@@ -31,6 +31,7 @@ float -?([0-9]*[.])?[0-9]+
 "|" |
 "," |
 ";" |
+":" |
 "(" |
 ")"     { return cheasle::Parser::symbol_type(chr(), location()); }
 
@@ -44,7 +45,10 @@ float -?([0-9]*[.])?[0-9]+
 
 {float} { return cheasle::Parser::make_VALUE(atof(text()), location()); }
 "true"  { return cheasle::Parser::make_VALUE(true, location()); }
-"false"  { return cheasle::Parser::make_VALUE(false, location()); }
+"false" { return cheasle::Parser::make_VALUE(false, location()); }
+
+"bool" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Boolean, location()); }
+"double" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Double, location()); }
 
  /* keywords */
 
