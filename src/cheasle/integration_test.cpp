@@ -42,7 +42,7 @@ Value execute(const std::string &code, bool trace = false) {
   }
 
   cheasle::ErrorList evalErrors{};
-  auto result = eval(ast, evalErrors);
+  auto result = eval(ast, evalErrors, std::cout);
 
   if (trace && evalErrors.hasErrors()) {
     std::cout << evalErrors;

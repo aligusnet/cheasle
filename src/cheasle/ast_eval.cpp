@@ -2,7 +2,6 @@
 #include "cheasle/ast.h"
 #include "cheasle/symbol_table.h"
 #include "location.h"
-#include <iostream>
 #include <optional>
 #include <sstream>
 
@@ -26,8 +25,8 @@ std::optional<double> getDouble(const std::optional<Value> &val) {
 }
 
 struct EvalWalker {
-  EvalWalker(SymbolTable symbolTable, ErrorList &errors)
-      : _symbolTable(std::move(symbolTable)), _errors(errors) {}
+  EvalWalker(SymbolTable symbolTable, ErrorList &errors, std::ostream &os)
+      : _symbolTable(std::move(symbolTable)), _errors(errors), _os(os) {}
 
   std::optional<Value> operator()(const AST &, const BinaryExpression &node) {
     auto lhs = getDouble(node.get<0>().visit(*this));
@@ -197,7 +196,7 @@ struct EvalWalker {
                         ValueSymbol{funcOpt->arguments[i].type, *value, false});
     }
 
-    EvalWalker eval{childTable, _errors};
+    EvalWalker eval{childTable, _errors, _os};
     return funcOpt->code.visit(eval);
   }
 
@@ -279,16 +278,16 @@ struct EvalWalker {
   std::optional<Value> callPrint(const std::vector<AST> arguments,
                                  const location &location) {
     std::optional<Value> value = 0.0;
-    std::cout << "out:";
+    _os << "out:";
     for (const auto &arg : arguments) {
       value = arg.visit(*this);
       if (!value) {
         return std::nullopt;
       }
-      std::cout << ' ' << *value;
+      _os << ' ' << *value;
     }
 
-    std::cout << std::endl;
+    _os << std::endl;
 
     return value;
   }
@@ -315,12 +314,14 @@ struct EvalWalker {
 
   SymbolTable _symbolTable;
   ErrorList &_errors;
+  std::ostream &_os;
 };
 } // namespace
 
-std::optional<Value> eval(const AST &node, ErrorList &errors) {
+std::optional<Value> eval(const AST &node, ErrorList &errors,
+                          std::ostream &os) {
   SymbolTable symbolTable{};
-  EvalWalker ew{std::move(symbolTable), errors};
+  EvalWalker ew{std::move(symbolTable), errors, os};
   return node.visit(ew);
 }
 

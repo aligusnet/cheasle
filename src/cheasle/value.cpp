@@ -9,7 +9,7 @@ template <class... Ts> struct Visitor : Ts... {
 template <class... Ts> Visitor(Ts...) -> Visitor<Ts...>;
 
 std::ostream &operator<<(std::ostream &os, const Value &val) {
-  std::visit(Visitor{[&os](const auto &v) { os << v; }}, val);
+  std::visit(Visitor{[&os](const auto &v) { os << std::boolalpha << v; }}, val);
   return os;
 }
 
