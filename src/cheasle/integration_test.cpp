@@ -9,7 +9,8 @@
 using Catch::Matchers::WithinRel;
 namespace cheasle {
 
-Value execute(const std::string &code, bool trace = false) {
+Value execute(const std::string &code, const std::string &testName,
+              bool trace = false) {
   if (trace) {
     std::cout << "********************************" << std::endl;
     std::cout << "Building and executing program: " << std::endl;
@@ -19,7 +20,7 @@ Value execute(const std::string &code, bool trace = false) {
   }
 
   Lexer lexer(code);
-  lexer.filename = "input-string";
+  lexer.filename = testName + ".che";
   Driver driver;
   Parser parser{lexer, &driver};
   auto parseResult = parser.parse();
@@ -73,37 +74,37 @@ Value execute(const std::string &code, bool trace = false) {
 }
 
 TEST_CASE("Fibonacci sequnce", "[integration]") {
-  std::string code = "def fibonacci(n: double): double = \n"
-                     "  if n == 0 then\n"
+  std::string code = "def fibonacci(n: double): double {\n"
+                     "  if n == 0 {\n"
                      "    0;\n"
-                     "  else\n"
-                     "    if n == 1 then\n"
+                     "  } else {\n"
+                     "    if n == 1 {\n"
                      "      1;\n"
-                     "    else\n"
+                     "    } else {\n"
                      "      fibonacci(n - 1) + fibonacci(n - 2);\n"
-                     "    end\n"
-                     "  end\n"
-                     "end\n"
+                     "    }\n"
+                     "  }\n"
+                     "}\n"
                      "fibonacci(21);\n";
-  auto result = execute(code, false);
+  auto result = execute(code, "fibonacci", true);
   REQUIRE_THAT(std::get<double>(result), WithinRel(10946.0, 1e-8));
 }
 
 TEST_CASE("Sqrt", "[integration]") {
   std::string code =
-      "def mySqrt(n: double) : double = \n"
-      "  def average(a: double, b: double) : double = (a+b)/2; end\n"
+      "def mySqrt(n: double) : double {\n"
+      "  def average(a: double, b: double) : double { (a+b)/2; }\n"
       "  const eps: double = 0.0001;\n"
       "  let e: double = 1;\n"
       "  let t: double = n;\n"
-      "  while |t - e| > eps do\n"
+      "  while |t - e| > eps {\n"
       "    t = n / e;\n"
       "    e = average(e, t);\n"
-      "  end\n"
-      "end\n"
+      "  }\n"
+      "}\n"
       "const arg: double = 171;\n"
       "mySqrt(arg);\n";
-  auto result = execute(code, false);
+  auto result = execute(code, "sqrt", true);
   REQUIRE_THAT(std::get<double>(result), WithinRel(sqrt(171.0), 1e-4));
 }
 

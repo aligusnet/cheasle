@@ -37,7 +37,7 @@ namespace cheasle { class Lexer; }
 %token <ValueType> VALUE_TYPE "value type"
 %token <BuiltInFunctionId> BUILTIN "built-in function"
 %token EOF 0 "end of file"
-%token IF THEN ELSE WHILE DO CONST LET DEF END
+%token IF ELSE WHILE CONST LET DEF
 
 %nonassoc <BinaryLogicalOperator> BLOP
 %right '='
@@ -64,9 +64,9 @@ block: /* nothing */ { $$ = AST::make<Block>(std::vector<AST>{}, std::move(@$));
   }
 ;
 
-stmt: IF exp THEN block ELSE block END  { $$ = AST::make<IfExpression>(std::move($2), std::move($4), std::move($6), std::move(@$)); }
-   | WHILE exp DO block END             { $$ = AST::make<WhileExpression>(std::move($2), std::move($4), std::move(@$)); }
-   | DEF IDENTIFIER '(' arglist ')' ':' VALUE_TYPE '=' block END { $$ = AST::make<FunctionDefinition>(std::move($2), $7, std::move($9), std::move($4), std::move(@$)); }
+stmt: IF exp '{' block '}' ELSE '{' block '}'  { $$ = AST::make<IfExpression>(std::move($2), std::move($4), std::move($8), std::move(@$)); }
+   | WHILE exp '{' block '}'             { $$ = AST::make<WhileExpression>(std::move($2), std::move($4), std::move(@$)); }
+   | DEF IDENTIFIER '(' arglist ')' ':' VALUE_TYPE '{' block '}' { $$ = AST::make<FunctionDefinition>(std::move($2), $7, std::move($9), std::move($4), std::move(@$)); }
    | CONST IDENTIFIER ':' VALUE_TYPE '=' stmt   { $$ = AST::make<VariableDefinition>(std::move($2), $4, true, std::move($6), std::move(@$)); }
    | LET IDENTIFIER  ':' VALUE_TYPE '=' stmt   { $$ = AST::make<VariableDefinition>(std::move($2), $4, false, std::move($6), std::move(@$)); }
    | IDENTIFIER '=' stmt   { $$ = AST::make<AssignmentExpression>(std::move($1), std::move($3), std::move(@$)); }

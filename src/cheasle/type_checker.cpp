@@ -201,17 +201,17 @@ public:
   }
 
   ValueType operator()(const AST &, const AssignmentExpression &node) {
+    auto type = node.get<0>().visit(*this);
     auto varInfo = _symbolTable.getVariable(node.name);
     if (!varInfo) {
       error("Unknown variable " + node.name, node.location);
-      return ValueType::Double;
+      return type;
     }
 
     if (varInfo->isConstant) {
       error("Assignment to constant variable " + node.name, node.location);
     }
 
-    auto type = node.get<0>().visit(*this);
     if (type != varInfo->type) {
       std::ostringstream oss;
       oss << "Variable <" << node.name << "> declared as " << varInfo->type
@@ -234,7 +234,7 @@ public:
 
 private:
   void error(std::string message, location location) {
-    _errors.append("ast-eval", std::move(message), std::move(location));
+    _errors.append("type-checkerÍ", std::move(message), std::move(location));
   }
 
   SymbolTable &_symbolTable;

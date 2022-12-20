@@ -49,7 +49,7 @@ TEST_CASE("arithmetic expression", "[parser]") {
 }
 
 TEST_CASE("if expression", "[parser]") {
-  std::string code = "if a < b then c; else d; end";
+  std::string code = "if a < b { c; } else { d; }";
   auto ast = parse(code);
 
   auto expected = TAST::ifexp(TAST::lt(TAST::ref("a"), TAST::ref("b")),
@@ -58,7 +58,7 @@ TEST_CASE("if expression", "[parser]") {
 }
 
 TEST_CASE("while expression", "[parser]") {
-  std::string code = "while a > b do c; end";
+  std::string code = "while a > b { c; }";
   auto ast = parse(code);
 
   auto expected = TAST::whileexp(TAST::gt(TAST::ref("a"), TAST::ref("b")),
@@ -68,7 +68,7 @@ TEST_CASE("while expression", "[parser]") {
 
 TEST_CASE("user function definition", "[parser]") {
   std::string code =
-      "def average(a: double, b: double) : double = (a + b) * 0.5; end";
+      "def average(a: double, b: double) : double { (a + b) * 0.5; }";
   auto ast = parse(code);
 
   auto body =

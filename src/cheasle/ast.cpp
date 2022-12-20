@@ -58,7 +58,7 @@ struct ASTPrinter {
     _os << "while ";
     node.get<0>().visit(*this);
     indent();
-    _os << "do" << std::endl;
+    _os << std::endl;
     node.get<1>().visit(*this);
   }
 

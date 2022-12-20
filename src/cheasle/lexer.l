@@ -32,6 +32,8 @@ float -?([0-9]*[.])?[0-9]+
 "," |
 ";" |
 ":" |
+"{" |
+"}" |
 "(" |
 ")"     { return cheasle::Parser::symbol_type(chr(), location()); }
 
@@ -53,14 +55,11 @@ float -?([0-9]*[.])?[0-9]+
  /* keywords */
 
 "if"    { return cheasle::Parser::make_IF(location()); }
-"then"  { return cheasle::Parser::make_THEN(location()); }
 "else"  { return cheasle::Parser::make_ELSE(location()); }
 "while" { return cheasle::Parser::make_WHILE(location()); }
-"do"    { return cheasle::Parser::make_DO(location()); }
 "const"   { return cheasle::Parser::make_CONST(location()); }
 "let"   { return cheasle::Parser::make_LET(location()); }
 "def"   { return cheasle::Parser::make_DEF(location()); }
-"end"   { return cheasle::Parser::make_END(location()); }
 
  /* built-in functions */
 "sqrt"  { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Sqrt, location()); }
