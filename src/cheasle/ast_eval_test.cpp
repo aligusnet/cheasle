@@ -1,6 +1,8 @@
 #include "Catch2/catch_amalgamated.hpp"
 #include "ast_test_util.h"
+#include "cheasle/ast.h"
 #include "cheasle/error.h"
+#include "cheasle/value.h"
 #include <cheasle/ast_eval.h>
 #include <optional>
 #include <sstream>
@@ -21,8 +23,8 @@ template <typename T> void requireType(const std::optional<Value> &val) {
 std::optional<Value> eval(const AST &node) {
   std::ostringstream oss;
   ErrorList errors;
-  return eval(node, errors, oss);
   REQUIRE_FALSE(errors.hasErrors());
+  return eval(node, errors, oss);
 }
 
 TEST_CASE("let and reference", "[ast-eval]") {
@@ -261,5 +263,25 @@ TEST_CASE("builtin functions") {
                              ContainsSubstring("false") &&
                              ContainsSubstring("11.9"));
   }
+}
+
+TEST_CASE("user function", "[ast-eval]") {
+  /*
+  def less(a: double, b: double): bool =
+    a < b;
+  end
+  less(10.0, 10.1);
+  */
+  auto func = TAST::def("less", ValueType::Boolean,
+                        {FunctionArgument{"a", ValueType::Double},
+                         FunctionArgument{"b", ValueType::Double}},
+                        TAST::lt(TAST::ref("a"), TAST::ref("b")));
+  auto call =
+      TAST::ufcall("less", {TAST::constant(10.0), TAST::constant(10.1)});
+  auto ast = TAST::b({std::move(func), std::move(call)});
+  auto result = eval(ast);
+
+  REQUIRE_BOOL(result);
+  REQUIRE(std::get<bool>(*result) == true);
 }
 } // namespace cheasle
