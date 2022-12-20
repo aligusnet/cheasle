@@ -48,6 +48,7 @@ public:
 
   std::optional<Value> getValue(const std::string &name) const;
 
+  std::optional<ValueSymbol> getVariable(const std::string &name) const;
   std::optional<FunctionSymbol> getFunction(const std::string &name) const;
 
 private:

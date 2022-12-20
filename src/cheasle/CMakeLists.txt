@@ -4,9 +4,9 @@ add_custom_command(OUTPUT parser.h parser.cpp DEPENDS ${CMAKE_CURRENT_SOURCE_DIR
 
 add_library(ChealseParserLib STATIC lexer.cpp parser.cpp error.cpp value.cpp)
 
-add_library(CheasleLib STATIC ast.cpp ast_eval.cpp symbol_table.cpp)
+add_library(CheasleLib STATIC ast.cpp ast_eval.cpp symbol_table.cpp type_checker.cpp)
 
-add_executable(cheasle_test ast_test_util.cpp ast_eval_test.cpp integration_test.cpp parser_test.cpp)
+add_executable(cheasle_test ast_test_util.cpp ast_eval_test.cpp integration_test.cpp parser_test.cpp type_checker_test.cpp)
 target_link_libraries(cheasle_test catch2 ReflexLibStatic ChealseParserLib CheasleLib)
 
 list(APPEND INCLUDES ${CMAKE_SOURCE_DIR}/src)

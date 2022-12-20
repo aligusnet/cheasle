@@ -1,6 +1,8 @@
+#include "cheasle/error.h"
 #include <Catch2/catch_amalgamated.hpp>
 #include <cheasle/ast_eval.h>
 #include <cheasle/driver.h>
+#include <cheasle/type_checker.h>
 #include <lexer.h>
 #include <parser.h>
 
@@ -36,19 +38,30 @@ Value execute(const std::string &code, bool trace = false) {
     std::cout << "--------------------------------" << std::endl;
     std::cout << "AST:" << std::endl;
     std::cout << ast << std::endl;
-
-    std::cout << "--------------------------------" << std::endl;
-    std::cout << "Execution:" << std::endl;
   }
+
+  cheasle::ErrorList typeCheckerErrors{};
+  auto type = cheasle::checkTypes(ast, typeCheckerErrors);
+
+  if (trace && typeCheckerErrors.hasErrors()) {
+    std::cout << "--------------------------------" << std::endl;
+    std::cout << "Type checking:" << std::endl;
+    std::cout << typeCheckerErrors;
+  }
+
+  REQUIRE_FALSE(typeCheckerErrors.hasErrors());
+  REQUIRE(type == ValueType::Double);
 
   cheasle::ErrorList evalErrors{};
   auto result = eval(ast, evalErrors, std::cout);
 
   if (trace && evalErrors.hasErrors()) {
+    std::cout << "--------------------------------" << std::endl;
+    std::cout << "Execution:" << std::endl;
     std::cout << evalErrors;
   }
 
-  REQUIRE(!evalErrors.hasErrors());
+  REQUIRE_FALSE(evalErrors.hasErrors());
   REQUIRE(result);
 
   if (trace) {

@@ -30,6 +30,19 @@ std::optional<Value> SymbolTable::getValue(const std::string &name) const {
   return std::nullopt;
 }
 
+std::optional<ValueSymbol>
+SymbolTable::getVariable(const std::string &name) const {
+  auto itopt = find(name);
+  if (itopt) {
+    const auto &it = *itopt;
+    if (const auto *var = std::get_if<ValueSymbol>(&it->second.data)) {
+      return *var;
+    }
+  }
+
+  return std::nullopt;
+}
+
 std::optional<FunctionSymbol>
 SymbolTable::getFunction(const std::string &name) const {
   auto itopt = find(name);
