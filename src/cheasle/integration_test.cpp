@@ -86,7 +86,7 @@ TEST_CASE("Fibonacci sequnce", "[integration]") {
                      "  }\n"
                      "}\n"
                      "fibonacci(21);\n";
-  auto result = execute(code, "fibonacci", true);
+  auto result = execute(code, "fibonacci", false);
   REQUIRE_THAT(std::get<double>(result), WithinRel(10946.0, 1e-8));
 }
 
@@ -104,7 +104,7 @@ TEST_CASE("Sqrt", "[integration]") {
       "}\n"
       "const arg: double = 171;\n"
       "mySqrt(arg);\n";
-  auto result = execute(code, "sqrt", true);
+  auto result = execute(code, "sqrt", false);
   REQUIRE_THAT(std::get<double>(result), WithinRel(sqrt(171.0), 1e-4));
 }
 
