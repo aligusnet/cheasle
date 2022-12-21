@@ -9,24 +9,24 @@ struct ASTPrinter {
 
   void operator()(const AST &, const BinaryExpression &node) {
     _os << '(';
-    node.get<0>().visit(*this);
+    node.lhs.visit(*this);
     _os << ' ' << node.op << ' ';
-    node.get<1>().visit(*this);
+    node.rhs.visit(*this);
     _os << ')';
   }
 
   void operator()(const AST &, const BinaryLogicalExpression &node) {
     _os << '(';
-    node.get<0>().visit(*this);
+    node.lhs.visit(*this);
     _os << ' ' << node.op << ' ';
-    node.get<1>().visit(*this);
+    node.rhs.visit(*this);
     _os << ')';
   }
 
   void operator()(const AST &, const UnaryExpression &node) {
     _os << '(';
     _os << ' ' << node.op;
-    node.get<0>().visit(*this);
+    node.child.visit(*this);
     _os << ')';
   }
 
@@ -34,7 +34,7 @@ struct ASTPrinter {
 
   void operator()(const AST &, const Block &node) {
     _indent += 2;
-    for (const auto &child : node.nodes()) {
+    for (const auto &child : node.children) {
       indent();
       child.visit(*this);
       _os << std::endl;
@@ -44,28 +44,28 @@ struct ASTPrinter {
 
   void operator()(const AST &, const IfExpression &node) {
     _os << "if ";
-    node.get<0>().visit(*this);
+    node.condition.visit(*this);
     _os << std::endl;
     indent();
     _os << "then" << std::endl;
-    node.get<1>().visit(*this);
+    node.thenBranch.visit(*this);
     indent();
     _os << "else" << std::endl;
-    node.get<2>().visit(*this);
+    node.elseBranch.visit(*this);
   }
 
   void operator()(const AST &, const WhileExpression &node) {
     _os << "while ";
-    node.get<0>().visit(*this);
+    node.condition.visit(*this);
     indent();
     _os << std::endl;
-    node.get<1>().visit(*this);
+    node.body.visit(*this);
   }
 
   void operator()(const AST &, const BuiltInFunction &node) {
     _os << node.id << '(';
-    for (const auto &arg : node.nodes()) {
-      if (&arg != &node.nodes().front()) {
+    for (const auto &arg : node.arguments) {
+      if (&arg != &node.arguments.front()) {
         _os << ", ";
       }
       arg.visit(*this);
@@ -82,13 +82,13 @@ struct ASTPrinter {
       _os << arg.name << ": " << arg.type;
     }
     _os << "): " << node.returnType << std::endl;
-    node.get<0>().visit(*this);
+    node.code.visit(*this);
   }
 
   void operator()(const AST &, const FunctionCall &node) {
     _os << node.name << '(';
-    for (const auto &arg : node.nodes()) {
-      if (&arg != &node.nodes().front()) {
+    for (const auto &arg : node.arguments) {
+      if (&arg != &node.arguments.front()) {
         _os << ", ";
       }
       arg.visit(*this);
@@ -99,12 +99,12 @@ struct ASTPrinter {
   void operator()(const AST &, const VariableDefinition &node) {
     _os << (node.isConstant ? "const " : "let ") << node.name << ": "
         << node.type << " = ";
-    node.get<0>().visit(*this);
+    node.expr.visit(*this);
   }
 
   void operator()(const AST &, const AssignmentExpression &node) {
     _os << node.name << " = ";
-    node.get<0>().visit(*this);
+    node.expr.visit(*this);
   }
 
   void operator()(const AST &, const NameReference &node) { _os << node.name; }

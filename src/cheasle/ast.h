@@ -3,7 +3,6 @@
 #include <cheasle/value.h>
 #include <iosfwd>
 #include <location.h>
-#include <mongodb/operator.h>
 #include <mongodb/polyvalue.h>
 #include <string>
 #include <vector>
@@ -31,101 +30,89 @@ using AST = mongodb::PolyValue<
 
 enum class BinaryOperator { Add, Subtract, Multiply, Divide };
 
-class BinaryExpression : public mongodb::OpSpecificArity<AST, 2> {
-  using Base = mongodb::OpSpecificArity<AST, 2>;
-
-public:
+struct BinaryExpression {
   BinaryExpression(AST lhs, AST rhs, BinaryOperator op, location location)
-      : Base(std::move(lhs), std::move(rhs)), op(op),
+      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
         location(std::move(location)) {}
 
+  AST lhs;
+  AST rhs;
   BinaryOperator op;
   location location;
 };
 
 enum class UnaryOperator { Minus, Abs };
 
-class UnaryExpression : public mongodb::OpSpecificArity<AST, 1> {
-  using Base = mongodb::OpSpecificArity<AST, 1>;
-
-public:
+struct UnaryExpression {
   UnaryExpression(AST child, UnaryOperator op, location location)
-      : Base(std::move(child)), op(op), location(std::move(location)) {}
+      : child(std::move(child)), op(op), location(std::move(location)) {}
 
+  AST child;
   UnaryOperator op;
   location location;
 };
 
 enum class BinaryLogicalOperator { EQ, NE, GT, GE, LT, LE };
 
-class BinaryLogicalExpression : public mongodb::OpSpecificArity<AST, 2> {
-  using Base = mongodb::OpSpecificArity<AST, 2>;
-
-public:
+struct BinaryLogicalExpression {
   BinaryLogicalExpression(AST lhs, AST rhs, BinaryLogicalOperator op,
                           location location)
-      : Base(std::move(lhs), std::move(rhs)), op(op),
+      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
         location(std::move(location)) {}
 
+  AST lhs;
+  AST rhs;
   BinaryLogicalOperator op;
   location location;
 };
 
-class ConstantValue : public mongodb::OpSpecificArity<AST, 0> {
-  using Base = mongodb::OpSpecificArity<AST, 0>;
-
-public:
-  explicit ConstantValue(Value value, location location)
+struct ConstantValue {
+  ConstantValue(Value value, location location)
       : value(std::move(value)), location(std::move(location)) {}
 
   Value value;
   location location;
 };
 
-class Block : public mongodb::OpSpecificDynamicArity<AST, 0> {
-  using Base = mongodb::OpSpecificDynamicArity<AST, 0>;
+struct Block {
+  Block(std::vector<AST> children, location location)
+      : children(std::move(children)), location(std::move(location)) {}
 
-public:
-  Block(std::vector<AST> nodes, location location)
-      : Base(std::move(nodes)), location(std::move(location)) {}
-
+  std::vector<AST> children;
   location location;
 };
 
-class IfExpression : public mongodb::OpSpecificArity<AST, 3> {
-  using Base = mongodb::OpSpecificArity<AST, 3>;
+struct IfExpression {
+  IfExpression(AST condition, AST thenBranch, AST elseBranch, location location)
+      : condition(std::move(condition)), thenBranch(std::move(thenBranch)),
+        elseBranch(std::move(elseBranch)), location(std::move(location)) {}
 
-public:
-  IfExpression(AST condition, AST thenBlock, AST elseBlock, location location)
-      : Base(std::move(condition), std::move(thenBlock), std::move(elseBlock)),
-        location(std::move(location)) {}
-
+  AST condition;
+  AST thenBranch;
+  AST elseBranch;
   location location;
 };
 
-class WhileExpression : public mongodb::OpSpecificArity<AST, 2> {
-  using Base = mongodb::OpSpecificArity<AST, 2>;
-
-public:
-  WhileExpression(AST condition, AST block, location location)
-      : Base(std::move(condition), std::move(block)),
+struct WhileExpression {
+  WhileExpression(AST condition, AST body, location location)
+      : condition(std::move(condition)), body(std::move(body)),
         location(std::move(location)) {}
 
+  AST condition;
+  AST body;
   location location;
 };
 
 enum class BuiltInFunctionId { Sqrt, Exp, Log, Print };
 
-class BuiltInFunction : public mongodb::OpSpecificDynamicArity<AST, 0> {
-  using Base = mongodb::OpSpecificDynamicArity<AST, 0>;
-
-public:
+struct BuiltInFunction {
   BuiltInFunction(BuiltInFunctionId id, std::vector<AST> arguments,
                   location location)
-      : Base(std::move(arguments)), id(id), location(std::move(location)) {}
+      : arguments(std::move(arguments)), id(id), location(std::move(location)) {
+  }
 
+  std::vector<AST> arguments;
   location location;
-
   BuiltInFunctionId id;
 };
 
@@ -134,62 +121,53 @@ struct FunctionArgument {
   ValueType type;
 };
 
-class FunctionDefinition : public mongodb::OpSpecificArity<AST, 1> {
-  using Base = mongodb::OpSpecificArity<AST, 1>;
-
-public:
+struct FunctionDefinition {
   FunctionDefinition(std::string name, ValueType returnType, AST code,
                      std::vector<FunctionArgument> arguments, location location)
-      : Base(std::move(code)), name(std::move(name)), returnType(returnType),
+      : code(std::move(code)), name(std::move(name)), returnType(returnType),
         arguments(std::move(arguments)), location(std::move(location)) {}
 
+  AST code;
   std::string name;
   ValueType returnType;
   std::vector<FunctionArgument> arguments;
   location location;
 };
 
-class FunctionCall : public mongodb::OpSpecificDynamicArity<AST, 0> {
-  using Base = mongodb::OpSpecificDynamicArity<AST, 0>;
-
-public:
+struct FunctionCall {
   FunctionCall(std::string name, std::vector<AST> arguments, location location)
-      : Base(std::move(arguments)), name(std::move(name)),
+      : arguments(std::move(arguments)), name(std::move(name)),
         location(std::move(location)) {}
 
+  std::vector<AST> arguments;
   std::string name;
   location location;
 };
 
-class VariableDefinition : public mongodb::OpSpecificArity<AST, 1> {
-  using Base = mongodb::OpSpecificArity<AST, 1>;
-
-public:
+struct VariableDefinition {
   VariableDefinition(std::string name, ValueType type, bool isConstant,
                      AST expr, location location)
-      : Base(std::move(expr)), name(std::move(name)), type(type),
+      : expr(std::move(expr)), name(std::move(name)), type(type),
         isConstant(isConstant), location(std::move(location)) {}
 
+  AST expr;
   std::string name;
   ValueType type;
   bool isConstant;
   location location;
 };
 
-class AssignmentExpression : public mongodb::OpSpecificArity<AST, 1> {
-  using Base = mongodb::OpSpecificArity<AST, 1>;
-
-public:
+struct AssignmentExpression {
   AssignmentExpression(std::string name, AST expr, location location)
-      : Base(std::move(expr)), name(std::move(name)),
+      : expr(std::move(expr)), name(std::move(name)),
         location(std::move(location)) {}
 
+  AST expr;
   std::string name;
   location location;
 };
 
-class NameReference : public mongodb::OpSpecificArity<AST, 0> {
-public:
+struct NameReference {
   NameReference(std::string name, location location)
       : name(std::move(name)), location(std::move(location)) {}
 

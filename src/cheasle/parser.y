@@ -59,7 +59,7 @@ start: block EOF { driver->setAST(std::move($1)); }
 
 block: /* nothing */ { $$ = AST::make<Block>(std::vector<AST>{}, std::move(@$)); }
    | block stmt { 
-      $1.cast<Block>()->nodes().emplace_back(std::move($2));
+      $1.cast<Block>()->children.emplace_back(std::move($2));
       $$ = std::move($1);
   }
 ;

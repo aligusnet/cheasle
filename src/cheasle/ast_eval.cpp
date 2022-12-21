@@ -29,8 +29,8 @@ struct EvalWalker {
       : _symbolTable(std::move(symbolTable)), _errors(errors), _os(os) {}
 
   std::optional<Value> operator()(const AST &, const BinaryExpression &node) {
-    auto lhs = getDouble(node.get<0>().visit(*this));
-    auto rhs = getDouble(node.get<1>().visit(*this));
+    auto lhs = getDouble(node.lhs.visit(*this));
+    auto rhs = getDouble(node.rhs.visit(*this));
     if (!lhs || !rhs) {
       error("Binary expression expects both arguments of type double",
             node.location);
@@ -54,8 +54,8 @@ struct EvalWalker {
 
   std::optional<Value> operator()(const AST &ast,
                                   const BinaryLogicalExpression &node) {
-    auto lhs = getDouble(node.get<0>().visit(*this));
-    auto rhs = getDouble(node.get<1>().visit(*this));
+    auto lhs = getDouble(node.lhs.visit(*this));
+    auto rhs = getDouble(node.rhs.visit(*this));
     if (!lhs || !rhs) {
       error("Binary logical expression expects both arguments of type double",
             node.location);
@@ -82,7 +82,7 @@ struct EvalWalker {
   }
 
   std::optional<Value> operator()(const AST &, const UnaryExpression &node) {
-    auto value = getDouble(node.get<0>().visit(*this));
+    auto value = getDouble(node.child.visit(*this));
     if (!value) {
       error("Unary operator expects one argument of type double.",
             node.location);
@@ -106,7 +106,7 @@ struct EvalWalker {
 
   std::optional<Value> operator()(const AST &, const Block &node) {
     std::optional<Value> value = 0.0;
-    for (const auto &child : node.nodes()) {
+    for (const auto &child : node.children) {
       value = child.visit(*this);
       if (!value) {
         return std::nullopt;
@@ -117,22 +117,22 @@ struct EvalWalker {
   }
 
   std::optional<Value> operator()(const AST &, const IfExpression &node) {
-    auto value = getBool(node.get<0>().visit(*this));
+    auto value = getBool(node.condition.visit(*this));
     if (!value) {
       error("<If> expects a predicate to be a boolean.", node.location);
       return std::nullopt;
     }
 
     if (*value) {
-      return node.get<1>().visit(*this);
+      return node.thenBranch.visit(*this);
     } else {
-      return node.get<2>().visit(*this);
+      return node.elseBranch.visit(*this);
     }
   }
 
   std::optional<Value> operator()(const AST &, const WhileExpression &node) {
-    const auto &pred = node.get<0>();
-    const auto &body = node.get<1>();
+    const auto &pred = node.condition;
+    const auto &body = node.body;
     std::optional<Value> value = 0.0;
     std::optional<Value> predValue;
 
@@ -148,13 +148,13 @@ struct EvalWalker {
   std::optional<Value> operator()(const AST &, const BuiltInFunction &node) {
     switch (node.id) {
     case BuiltInFunctionId::Exp:
-      return callExp(node.nodes(), node.location);
+      return callExp(node.arguments, node.location);
     case BuiltInFunctionId::Log:
-      return callLog(node.nodes(), node.location);
+      return callLog(node.arguments, node.location);
     case BuiltInFunctionId::Print:
-      return callPrint(node.nodes(), node.location);
+      return callPrint(node.arguments, node.location);
     case BuiltInFunctionId::Sqrt:
-      return callSqrt(node.nodes(), node.location);
+      return callSqrt(node.arguments, node.location);
     }
 
     error("Unknown builtin function", node.location);
@@ -163,8 +163,7 @@ struct EvalWalker {
 
   std::optional<Value> operator()(const AST &, const FunctionDefinition &node) {
     _symbolTable.define(
-        node.name,
-        FunctionSymbol{node.returnType, node.arguments, node.get<0>()});
+        node.name, FunctionSymbol{node.returnType, node.arguments, node.code});
     return 0.0;
   }
 
@@ -175,18 +174,18 @@ struct EvalWalker {
       return std::nullopt;
     }
 
-    if (node.nodes().size() != funcOpt->arguments.size()) {
+    if (node.arguments.size() != funcOpt->arguments.size()) {
       error("Wrong number of arguments passed to function " + node.name,
             node.location);
       return std::nullopt;
     }
 
     std::vector<ValueSymbol> values;
-    values.reserve(node.nodes().size());
+    values.reserve(node.arguments.size());
 
     SymbolTable childTable{&_symbolTable};
     for (size_t i = 0; i < funcOpt->arguments.size(); ++i) {
-      auto value = node.nodes()[i].visit(*this);
+      auto value = node.arguments[i].visit(*this);
       if (!value) {
         return std::nullopt;
       }
@@ -208,7 +207,7 @@ struct EvalWalker {
       return std::nullopt;
     }
 
-    auto value = node.get<0>().visit(*this);
+    auto value = node.expr.visit(*this);
     if (!value) {
       return std::nullopt;
     }
@@ -219,7 +218,7 @@ struct EvalWalker {
 
   std::optional<Value> operator()(const AST &,
                                   const AssignmentExpression &node) {
-    auto value = node.get<0>().visit(*this);
+    auto value = node.expr.visit(*this);
     if (!value) {
       return std::nullopt;
     }

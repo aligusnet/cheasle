@@ -10,8 +10,8 @@ public:
       : _symbolTable(symbolTable), _errors(errorList) {}
 
   ValueType operator()(const AST &, const BinaryExpression &node) {
-    auto lhs = node.get<0>().visit(*this);
-    auto rhs = node.get<1>().visit(*this);
+    auto lhs = node.lhs.visit(*this);
+    auto rhs = node.rhs.visit(*this);
 
     if (lhs != ValueType::Double || rhs != ValueType::Double) {
       error(
@@ -23,7 +23,7 @@ public:
   }
 
   ValueType operator()(const AST &, const UnaryExpression &node) {
-    auto child = node.get<0>().visit(*this);
+    auto child = node.child.visit(*this);
 
     if (child != ValueType::Double) {
       error("Unary expression expects an operand of double type",
@@ -34,8 +34,8 @@ public:
   }
 
   ValueType operator()(const AST &, const BinaryLogicalExpression &node) {
-    auto lhs = node.get<0>().visit(*this);
-    auto rhs = node.get<1>().visit(*this);
+    auto lhs = node.lhs.visit(*this);
+    auto rhs = node.rhs.visit(*this);
 
     if (lhs != ValueType::Double || rhs != ValueType::Double) {
       error("Binary logical expression expects both operands having the same "
@@ -58,13 +58,13 @@ public:
   }
 
   ValueType operator()(const AST &, const Block &node) {
-    if (node.nodes().empty()) {
+    if (node.children.empty()) {
       error("Block cannot by empty", node.location);
       return ValueType::Double;
     }
 
     ValueType type = ValueType::Double;
-    for (const auto &child : node.nodes()) {
+    for (const auto &child : node.children) {
       type = child.visit(*this);
     }
 
@@ -72,14 +72,14 @@ public:
   }
 
   ValueType operator()(const AST &, const IfExpression &node) {
-    auto predType = node.get<0>().visit(*this);
+    auto predType = node.condition.visit(*this);
     if (predType != ValueType::Boolean) {
       error("ValueType of condition expression in <if> is expected to be bool.",
             node.location);
     }
 
-    auto thenType = node.get<1>().visit(*this);
-    auto elseType = node.get<2>().visit(*this);
+    auto thenType = node.thenBranch.visit(*this);
+    auto elseType = node.elseBranch.visit(*this);
 
     if (thenType != elseType) {
       error(
@@ -91,44 +91,44 @@ public:
   }
 
   ValueType operator()(const AST &, const WhileExpression &node) {
-    auto predType = node.get<0>().visit(*this);
+    auto predType = node.condition.visit(*this);
     if (predType != ValueType::Boolean) {
       error("ValueType of condition expression in <while..do> is expected to "
             "be bool.",
             node.location);
     }
 
-    return node.get<1>().visit(*this);
+    return node.body.visit(*this);
   }
 
   ValueType operator()(const AST &, const BuiltInFunction &node) {
     switch (node.id) {
     case BuiltInFunctionId::Exp:
-      if (node.nodes().size() != 1 ||
-          node.nodes().front().visit(*this) != ValueType::Double) {
+      if (node.arguments.size() != 1 ||
+          node.arguments.front().visit(*this) != ValueType::Double) {
         error("Bultin function <exp> expects 1 double argument", node.location);
       }
       return ValueType::Double;
     case BuiltInFunctionId::Log:
-      if (node.nodes().size() != 1 ||
-          node.nodes().front().visit(*this) != ValueType::Double) {
+      if (node.arguments.size() != 1 ||
+          node.arguments.front().visit(*this) != ValueType::Double) {
         error("Bultin function <log> expects 1 double argument", node.location);
       }
       return ValueType::Double;
     case BuiltInFunctionId::Sqrt:
-      if (node.nodes().size() != 1 ||
-          node.nodes().front().visit(*this) != ValueType::Double) {
+      if (node.arguments.size() != 1 ||
+          node.arguments.front().visit(*this) != ValueType::Double) {
         error("Bultin function <sqrt> expects 1 double argument",
               node.location);
       }
       return ValueType::Double;
     case BuiltInFunctionId::Print:
-      if (node.nodes().size() == 0) {
+      if (node.arguments.size() == 0) {
         error("Bultin function <print> expects at least 1 argument",
               node.location);
         return ValueType::Double;
       }
-      return node.nodes().back().visit(*this);
+      return node.arguments.back().visit(*this);
     }
 
     error("Unknown bultin function", node.location);
@@ -142,16 +142,17 @@ public:
       return ValueType::Double;
     }
 
-    if (node.nodes().size() != func->arguments.size()) {
+    if (node.arguments.size() != func->arguments.size()) {
       std::ostringstream oss;
       oss << "Function <" << node.name << "> expects " << func->arguments.size()
-          << " arguments, but " << node.nodes().size() << " were passed in";
+          << " arguments, but " << node.arguments.size() << " were passed in";
       error(oss.str(), node.location);
     }
 
-    const size_t nargs = std::min(node.nodes().size(), func->arguments.size());
+    const size_t nargs =
+        std::min(node.arguments.size(), func->arguments.size());
     for (size_t i = 0; i < nargs; ++i) {
-      auto type = node.nodes()[i].visit(*this);
+      auto type = node.arguments[i].visit(*this);
       const auto &arg = func->arguments[i];
       if (type != arg.type) {
         std::ostringstream oss;
@@ -166,8 +167,7 @@ public:
 
   ValueType operator()(const AST &, const FunctionDefinition &node) {
     _symbolTable.define(
-        node.name,
-        FunctionSymbol{node.returnType, node.arguments, node.get<0>()});
+        node.name, FunctionSymbol{node.returnType, node.arguments, node.code});
 
     SymbolTable funcSymbolTable{&_symbolTable};
     for (const auto &arg : node.arguments) {
@@ -175,7 +175,7 @@ public:
     }
 
     TypeChecker funcTypeChecker{funcSymbolTable, _errors};
-    auto returnType = node.get<0>().visit(funcTypeChecker);
+    auto returnType = node.code.visit(funcTypeChecker);
     if (node.returnType != returnType) {
       std::ostringstream oss;
       oss << "Function <" << node.name << "> expects " << node.returnType
@@ -187,7 +187,7 @@ public:
   }
 
   ValueType operator()(const AST &, const VariableDefinition &node) {
-    auto type = node.get<0>().visit(*this);
+    auto type = node.expr.visit(*this);
     if (type != node.type) {
       std::ostringstream oss;
       oss << "Variable <" << node.name << "> declared as " << node.type
@@ -201,7 +201,7 @@ public:
   }
 
   ValueType operator()(const AST &, const AssignmentExpression &node) {
-    auto type = node.get<0>().visit(*this);
+    auto type = node.expr.visit(*this);
     auto varInfo = _symbolTable.getVariable(node.name);
     if (!varInfo) {
       error("Unknown variable " + node.name, node.location);
