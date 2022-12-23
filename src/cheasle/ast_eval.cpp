@@ -53,7 +53,7 @@ struct EvalWalker {
   }
 
   std::optional<Value> operator()(const AST &ast,
-                                  const BinaryLogicalExpression &node) {
+                                  const ComparisonExpression &node) {
     auto lhs = getDouble(node.lhs.visit(*this));
     auto rhs = getDouble(node.rhs.visit(*this));
     if (!lhs || !rhs) {

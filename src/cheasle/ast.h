@@ -11,7 +11,7 @@ namespace cheasle {
 
 class BinaryExpression;
 class UnaryExpression;
-class BinaryLogicalExpression;
+class ComparisonExpression;
 class ConstantValue;
 class Block;
 class IfExpression;
@@ -23,10 +23,11 @@ class VariableDefinition;
 class AssignmentExpression;
 class NameReference;
 
-using AST = mongodb::PolyValue<
-    BinaryExpression, BinaryLogicalExpression, UnaryExpression, ConstantValue,
-    Block, IfExpression, WhileExpression, BuiltInFunction, FunctionDefinition,
-    FunctionCall, VariableDefinition, AssignmentExpression, NameReference>;
+using AST =
+    mongodb::PolyValue<BinaryExpression, ComparisonExpression, UnaryExpression,
+                       ConstantValue, Block, IfExpression, WhileExpression,
+                       BuiltInFunction, FunctionDefinition, FunctionCall,
+                       VariableDefinition, AssignmentExpression, NameReference>;
 
 enum class BinaryOperator { Add, Subtract, Multiply, Divide };
 
@@ -54,9 +55,9 @@ struct UnaryExpression {
 
 enum class BinaryLogicalOperator { EQ, NE, GT, GE, LT, LE };
 
-struct BinaryLogicalExpression {
-  BinaryLogicalExpression(AST lhs, AST rhs, BinaryLogicalOperator op,
-                          location location)
+struct ComparisonExpression {
+  ComparisonExpression(AST lhs, AST rhs, BinaryLogicalOperator op,
+                       location location)
       : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
         location(std::move(location)) {}
 

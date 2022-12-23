@@ -73,7 +73,7 @@ stmt: IF exp '{' block '}' ELSE '{' block '}'  { $$ = AST::make<IfExpression>(st
    | exp ';'
 ;
 
-exp: exp BLOP exp         { $$ = AST::make<BinaryLogicalExpression>(std::move($1), std::move($3), $2, std::move(@$)); }
+exp: exp BLOP exp         { $$ = AST::make<ComparisonExpression>(std::move($1), std::move($3), $2, std::move(@$)); }
    | exp '+' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Add, std::move(@$)); }
    | exp '-' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Subtract, std::move(@$));}
    | exp '*' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Multiply, std::move(@$)); }

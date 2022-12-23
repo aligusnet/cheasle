@@ -15,7 +15,7 @@ struct ASTPrinter {
     _os << ')';
   }
 
-  void operator()(const AST &, const BinaryLogicalExpression &node) {
+  void operator()(const AST &, const ComparisonExpression &node) {
     _os << '(';
     node.lhs.visit(*this);
     _os << ' ' << node.op << ' ';

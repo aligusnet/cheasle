@@ -33,7 +33,7 @@ public:
     return ValueType::Double;
   }
 
-  ValueType operator()(const AST &, const BinaryLogicalExpression &node) {
+  ValueType operator()(const AST &, const ComparisonExpression &node) {
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 

@@ -57,33 +57,33 @@ public:
   }
 
   static inline AST lt(AST lhs, AST rhs) {
-    return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
-                                              BinaryLogicalOperator::LT, loc);
+    return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
+                                           BinaryLogicalOperator::LT, loc);
   }
 
   static inline AST le(AST lhs, AST rhs) {
-    return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
-                                              BinaryLogicalOperator::LE, loc);
+    return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
+                                           BinaryLogicalOperator::LE, loc);
   }
 
   static inline AST gt(AST lhs, AST rhs) {
-    return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
-                                              BinaryLogicalOperator::GT, loc);
+    return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
+                                           BinaryLogicalOperator::GT, loc);
   }
 
   static inline AST ge(AST lhs, AST rhs) {
-    return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
-                                              BinaryLogicalOperator::GE, loc);
+    return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
+                                           BinaryLogicalOperator::GE, loc);
   }
 
   static inline AST eq(AST lhs, AST rhs) {
-    return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
-                                              BinaryLogicalOperator::EQ, loc);
+    return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
+                                           BinaryLogicalOperator::EQ, loc);
   }
 
   static inline AST ne(AST lhs, AST rhs) {
-    return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
-                                              BinaryLogicalOperator::NE, loc);
+    return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
+                                           BinaryLogicalOperator::NE, loc);
   }
 
   static inline AST b(AST child) {
