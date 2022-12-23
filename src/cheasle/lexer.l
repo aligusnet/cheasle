@@ -52,15 +52,16 @@ float -?([0-9]*[.])?[0-9]+
 "or"   { return cheasle::Parser::make_OR(location()); }
 "not"   { return cheasle::Parser::make_NOT(location()); }
 
+/* values */
 {float} { return cheasle::Parser::make_VALUE(atof(text()), location()); }
 "true"  { return cheasle::Parser::make_VALUE(true, location()); }
 "false" { return cheasle::Parser::make_VALUE(false, location()); }
 
+/* data types */
 "bool" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Boolean, location()); }
 "double" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Double, location()); }
 
- /* keywords */
-
+/* keywords */
 "if"    { return cheasle::Parser::make_IF(location()); }
 "else"  { return cheasle::Parser::make_ELSE(location()); }
 "while" { return cheasle::Parser::make_WHILE(location()); }
@@ -68,13 +69,13 @@ float -?([0-9]*[.])?[0-9]+
 "let"   { return cheasle::Parser::make_LET(location()); }
 "def"   { return cheasle::Parser::make_DEF(location()); }
 
- /* built-in functions */
+/* built-in functions */
 "sqrt"  { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Sqrt, location()); }
 "exp"   { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Exp, location()); }
 "log"   { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Log, location()); }
 "print" { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Print, location()); }
 
- /* names */
+/* names */
 [a-zA-Z][a-zA-Z0-9]*  { return cheasle::Parser::make_IDENTIFIER(text(), location()); }
 
 <<EOF>> {return cheasle::Parser::make_EOF(location()); }
