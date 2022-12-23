@@ -77,13 +77,13 @@ public:
   }
 
   static inline AST eq(AST lhs, AST rhs) {
-    return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
-                                           ComparisonOperator::EQ, loc);
+    return AST::make<EqualityExpression>(std::move(lhs), std::move(rhs),
+                                         EqualityOperator::EQ, loc);
   }
 
   static inline AST ne(AST lhs, AST rhs) {
-    return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
-                                           ComparisonOperator::NE, loc);
+    return AST::make<EqualityExpression>(std::move(lhs), std::move(rhs),
+                                         EqualityOperator::NE, loc);
   }
 
   static inline AST andexp(AST lhs, AST rhs) {

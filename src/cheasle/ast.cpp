@@ -15,6 +15,14 @@ struct ASTPrinter {
     _os << ')';
   }
 
+  void operator()(const AST &, const EqualityExpression &node) {
+    _os << '(';
+    node.lhs.visit(*this);
+    _os << ' ' << node.op << ' ';
+    node.rhs.visit(*this);
+    _os << ')';
+  }
+
   void operator()(const AST &, const ComparisonExpression &node) {
     _os << '(';
     node.lhs.visit(*this);
@@ -161,14 +169,21 @@ std::ostream &operator<<(std::ostream &os, UnaryOperator op) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, ComparisonOperator op) {
+std::ostream &operator<<(std::ostream &os, EqualityOperator op) {
   switch (op) {
-  case ComparisonOperator::EQ:
+  case EqualityOperator::EQ:
     os << "==";
     break;
-  case ComparisonOperator::NE:
+  case EqualityOperator::NE:
     os << "!=";
     break;
+  }
+
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, ComparisonOperator op) {
+  switch (op) {
   case ComparisonOperator::GT:
     os << ">";
     break;

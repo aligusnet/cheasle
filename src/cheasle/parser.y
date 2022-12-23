@@ -43,6 +43,7 @@ namespace cheasle { class Lexer; }
 %right '='
 %left OR
 %left AND
+%left <EqualityOperator> EQ
 %left <ComparisonOperator> CMP
 %left '+' '-'
 %left '*' '/'
@@ -77,7 +78,8 @@ stmt: IF exp '{' block '}' ELSE '{' block '}'  { $$ = AST::make<IfExpression>(st
    | exp ';'
 ;
 
-exp: exp CMP exp          { $$ = AST::make<ComparisonExpression>(std::move($1), std::move($3), $2, std::move(@$)); }
+exp: exp EQ exp           { $$ = AST::make<EqualityExpression>(std::move($1), std::move($3), $2, std::move(@$)); }
+   | exp CMP exp          { $$ = AST::make<ComparisonExpression>(std::move($1), std::move($3), $2, std::move(@$)); }
    | exp AND exp          { $$ = AST::make<BinaryLogicalExpression>(std::move($1), std::move($3), BinaryLogicalOperator::And, std::move(@$)); }
    | exp OR exp           { $$ = AST::make<BinaryLogicalExpression>(std::move($1), std::move($3), BinaryLogicalOperator::Or, std::move(@$)); }
    | NOT exp              { $$ = AST::make<NotExpression>(std::move($2), std::move(@$)); }

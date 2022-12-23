@@ -11,6 +11,7 @@ namespace cheasle {
 
 struct BinaryExpression;
 struct UnaryExpression;
+struct EqualityExpression;
 struct ComparisonExpression;
 struct BinaryLogicalExpression;
 struct NotExpression;
@@ -25,12 +26,11 @@ struct VariableDefinition;
 struct AssignmentExpression;
 struct NameReference;
 
-using AST =
-    mongodb::PolyValue<BinaryExpression, ComparisonExpression, UnaryExpression,
-                       BinaryLogicalExpression, NotExpression, ConstantValue,
-                       Block, IfExpression, WhileExpression, BuiltInFunction,
-                       FunctionDefinition, FunctionCall, VariableDefinition,
-                       AssignmentExpression, NameReference>;
+using AST = mongodb::PolyValue<
+    BinaryExpression, UnaryExpression, EqualityExpression, ComparisonExpression,
+    BinaryLogicalExpression, NotExpression, ConstantValue, Block, IfExpression,
+    WhileExpression, BuiltInFunction, FunctionDefinition, FunctionCall,
+    VariableDefinition, AssignmentExpression, NameReference>;
 
 enum class BinaryOperator { Add, Subtract, Multiply, Divide };
 
@@ -56,7 +56,20 @@ struct UnaryExpression {
   location location;
 };
 
-enum class ComparisonOperator { EQ, NE, GT, GE, LT, LE };
+enum class EqualityOperator { EQ, NE };
+
+struct EqualityExpression {
+  EqualityExpression(AST lhs, AST rhs, EqualityOperator op, location location)
+      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
+        location(std::move(location)) {}
+
+  AST lhs;
+  AST rhs;
+  EqualityOperator op;
+  location location;
+};
+
+enum class ComparisonOperator { GT, GE, LT, LE };
 
 struct ComparisonExpression {
   ComparisonExpression(AST lhs, AST rhs, ComparisonOperator op,
@@ -203,6 +216,7 @@ struct NameReference {
 
 std::ostream &operator<<(std::ostream &os, BinaryOperator op);
 std::ostream &operator<<(std::ostream &os, UnaryOperator op);
+std::ostream &operator<<(std::ostream &os, EqualityOperator op);
 std::ostream &operator<<(std::ostream &os, ComparisonOperator op);
 std::ostream &operator<<(std::ostream &os, BinaryLogicalOperator op);
 std::ostream &operator<<(std::ostream &os, BuiltInFunctionId id);

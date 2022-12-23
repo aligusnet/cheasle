@@ -37,11 +37,13 @@ float -?([0-9]*[.])?[0-9]+
 "(" |
 ")"     { return cheasle::Parser::symbol_type(chr(), location()); }
 
-/* comparison ops, all are a CMP token */
+/* equality operators */
+"!="    { return cheasle::Parser::make_EQ(EqualityOperator::NE, location()); }
+"=="    { return cheasle::Parser::make_EQ(EqualityOperator::EQ, location()); }
+
+/* comparison operators */
 ">"     { return cheasle::Parser::make_CMP(ComparisonOperator::GT, location()); }
 "<"     { return cheasle::Parser::make_CMP(ComparisonOperator::LT, location()); }
-"!="    { return cheasle::Parser::make_CMP(ComparisonOperator::NE, location()); }
-"=="    { return cheasle::Parser::make_CMP(ComparisonOperator::EQ, location()); }
 ">="    { return cheasle::Parser::make_CMP(ComparisonOperator::GE, location()); }
 "<="    { return cheasle::Parser::make_CMP(ComparisonOperator::LE, location()); }
 

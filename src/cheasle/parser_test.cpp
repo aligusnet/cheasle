@@ -37,6 +37,25 @@ TEST_CASE("addition expression", "[parser]") {
   REQUIRE_AST(expected, ast);
 }
 
+TEST_CASE("equality expression", "[parser]") {
+  SECTION("eq") {
+    std::string code = "5 == 10;";
+    auto ast = parse(code);
+
+    auto expected = TAST::eq(TAST::constant(5.0), TAST::constant(10.0));
+
+    REQUIRE_AST(expected, ast);
+  }
+  SECTION("ne") {
+    std::string code = "5 != 10;";
+    auto ast = parse(code);
+
+    auto expected = TAST::ne(TAST::constant(5.0), TAST::constant(10.0));
+
+    REQUIRE_AST(expected, ast);
+  }
+}
+
 TEST_CASE("comparison expression", "[parser]") {
   SECTION("gt") {
     std::string code = "5 > 10;";
@@ -46,11 +65,12 @@ TEST_CASE("comparison expression", "[parser]") {
 
     REQUIRE_AST(expected, ast);
   }
-  SECTION("ne") {
-    std::string code = "5 != 10;";
+
+  SECTION("le") {
+    std::string code = "5 <= 10;";
     auto ast = parse(code);
 
-    auto expected = TAST::ne(TAST::constant(5.0), TAST::constant(10.0));
+    auto expected = TAST::le(TAST::constant(5.0), TAST::constant(10.0));
 
     REQUIRE_AST(expected, ast);
   }

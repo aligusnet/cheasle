@@ -53,6 +53,27 @@ struct EvalWalker {
   }
 
   std::optional<Value> operator()(const AST &ast,
+                                  const EqualityExpression &node) {
+    auto lhs = node.lhs.visit(*this);
+    auto rhs = node.rhs.visit(*this);
+    if (!lhs || !rhs || lhs->index() != rhs->index()) {
+      error("Equality expression expects both arguments of same type",
+            node.location);
+      return std::nullopt;
+    }
+
+    switch (node.op) {
+    case EqualityOperator::EQ:
+      return *lhs == *rhs;
+    case EqualityOperator::NE:
+      return *lhs != *rhs;
+    }
+
+    error("Unkwnown equality operator", node.location);
+    return std::nullopt;
+  }
+
+  std::optional<Value> operator()(const AST &ast,
                                   const ComparisonExpression &node) {
     auto lhs = getDouble(node.lhs.visit(*this));
     auto rhs = getDouble(node.rhs.visit(*this));
@@ -63,10 +84,6 @@ struct EvalWalker {
     }
 
     switch (node.op) {
-    case ComparisonOperator::EQ:
-      return *lhs == *rhs;
-    case ComparisonOperator::NE:
-      return *lhs != *rhs;
     case ComparisonOperator::GT:
       return *lhs > *rhs;
     case ComparisonOperator::GE:

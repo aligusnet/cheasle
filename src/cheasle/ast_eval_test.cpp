@@ -23,6 +23,10 @@ template <typename T> void requireType(const std::optional<Value> &val) {
 std::optional<Value> eval(const AST &node) {
   std::ostringstream oss;
   ErrorList errors;
+  if (errors.hasErrors()) {
+    std::cerr << errors;
+  }
+
   REQUIRE_FALSE(errors.hasErrors());
   return eval(node, errors, oss);
 }
@@ -101,7 +105,7 @@ TEST_CASE("unary expression", "[ast-eval]") {
   }
 }
 
-void testComparisonExpression(double lhs, double rhs) {
+void testEqualityAndComparisonExpressions(double lhs, double rhs) {
   {
     auto ast = TAST::gt(TAST::constant(lhs), TAST::constant(rhs));
     auto result = eval(ast);
@@ -151,16 +155,22 @@ void testComparisonExpression(double lhs, double rhs) {
   }
 }
 
-TEST_CASE("comparison expression", "[ast-eval]") {
-  SECTION("1.0 <=> 5.0") { testComparisonExpression(1.0, 5.0); }
-  SECTION("-1.0 <=> -5.0") { testComparisonExpression(-1.0, -5.0); }
-  SECTION("1.0 <=> -5.0") { testComparisonExpression(1.0, -5.0); }
-  SECTION("-1.0 <=> 5.0") { testComparisonExpression(-1.0, 5.0); }
+TEST_CASE("equality and comparison expression", "[ast-eval]") {
+  SECTION("1.0 <=> 5.0") { testEqualityAndComparisonExpressions(1.0, 5.0); }
+  SECTION("-1.0 <=> -5.0") { testEqualityAndComparisonExpressions(-1.0, -5.0); }
+  SECTION("1.0 <=> -5.0") { testEqualityAndComparisonExpressions(1.0, -5.0); }
+  SECTION("-1.0 <=> 5.0") { testEqualityAndComparisonExpressions(-1.0, 5.0); }
 
-  SECTION("11.0 <=> 11.0") { testComparisonExpression(11.0, 11.0); }
-  SECTION("-11.0 <=> -11.0") { testComparisonExpression(-11.0, -11.0); }
-  SECTION("11.0 <=> -11.0") { testComparisonExpression(11.0, -11.0); }
-  SECTION("-11.0 <=> 11.0") { testComparisonExpression(-11.0, 11.0); }
+  SECTION("11.0 <=> 11.0") { testEqualityAndComparisonExpressions(11.0, 11.0); }
+  SECTION("-11.0 <=> -11.0") {
+    testEqualityAndComparisonExpressions(-11.0, -11.0);
+  }
+  SECTION("11.0 <=> -11.0") {
+    testEqualityAndComparisonExpressions(11.0, -11.0);
+  }
+  SECTION("-11.0 <=> 11.0") {
+    testEqualityAndComparisonExpressions(-11.0, 11.0);
+  }
 }
 
 TEST_CASE("binary logical expression", "[ast-eval]") {

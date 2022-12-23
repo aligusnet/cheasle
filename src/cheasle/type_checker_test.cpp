@@ -119,13 +119,7 @@ TEST_CASE("unary expressions", "[type-checker]") {
   }
 }
 
-TEST_CASE("comparison expressions", "[type-checker]") {
-  SECTION("double < double") {
-    auto ast = TAST::lt(TAST::constant(10.0), TAST::constant(11.0));
-    auto type = checkTypes(ast);
-    REQUIRE(type == ValueType::Boolean);
-  }
-
+TEST_CASE("equality expressions", "[type-checker]") {
   SECTION("bool == double") {
     auto ast = TAST::eq(TAST::constant(false), TAST::constant(11.0));
     auto type = checkTypesWithErrors(ast);
@@ -134,6 +128,26 @@ TEST_CASE("comparison expressions", "[type-checker]") {
 
   SECTION("bool != bool") {
     auto ast = TAST::ne(TAST::constant(false), TAST::constant(true));
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+}
+
+TEST_CASE("comparison expressions", "[type-checker]") {
+  SECTION("double < double") {
+    auto ast = TAST::lt(TAST::constant(10.0), TAST::constant(11.0));
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("bool >= double") {
+    auto ast = TAST::ge(TAST::constant(false), TAST::constant(11.0));
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("bool < bool") {
+    auto ast = TAST::lt(TAST::constant(false), TAST::constant(true));
     auto type = checkTypesWithErrors(ast);
     REQUIRE(type == ValueType::Boolean);
   }

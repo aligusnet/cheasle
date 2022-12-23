@@ -34,6 +34,19 @@ public:
     return ValueType::Double;
   }
 
+  ValueType operator()(const AST &, const EqualityExpression &node) {
+    auto lhs = node.lhs.visit(*this);
+    auto rhs = node.rhs.visit(*this);
+
+    if (lhs != rhs) {
+      error("Equality expression expects both operands having the same "
+            "double type",
+            node.location);
+    }
+
+    return ValueType::Boolean;
+  }
+
   ValueType operator()(const AST &, const ComparisonExpression &node) {
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
