@@ -58,32 +58,46 @@ public:
 
   static inline AST lt(AST lhs, AST rhs) {
     return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
-                                           BinaryLogicalOperator::LT, loc);
+                                           ComparisonOperator::LT, loc);
   }
 
   static inline AST le(AST lhs, AST rhs) {
     return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
-                                           BinaryLogicalOperator::LE, loc);
+                                           ComparisonOperator::LE, loc);
   }
 
   static inline AST gt(AST lhs, AST rhs) {
     return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
-                                           BinaryLogicalOperator::GT, loc);
+                                           ComparisonOperator::GT, loc);
   }
 
   static inline AST ge(AST lhs, AST rhs) {
     return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
-                                           BinaryLogicalOperator::GE, loc);
+                                           ComparisonOperator::GE, loc);
   }
 
   static inline AST eq(AST lhs, AST rhs) {
     return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
-                                           BinaryLogicalOperator::EQ, loc);
+                                           ComparisonOperator::EQ, loc);
   }
 
   static inline AST ne(AST lhs, AST rhs) {
     return AST::make<ComparisonExpression>(std::move(lhs), std::move(rhs),
-                                           BinaryLogicalOperator::NE, loc);
+                                           ComparisonOperator::NE, loc);
+  }
+
+  static inline AST andexp(AST lhs, AST rhs) {
+    return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
+                                              BinaryLogicalOperator::And, loc);
+  }
+
+  static inline AST orexp(AST lhs, AST rhs) {
+    return AST::make<BinaryLogicalExpression>(std::move(lhs), std::move(rhs),
+                                              BinaryLogicalOperator::Or, loc);
+  }
+
+  static inline AST notexp(AST child) {
+    return AST::make<NotExpression>(std::move(child), loc);
   }
 
   static inline AST b(AST child) {

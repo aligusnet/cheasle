@@ -1,4 +1,5 @@
 #include "type_checker.h"
+#include "cheasle/ast.h"
 #include <cheasle/symbol_table.h>
 #include <sstream>
 
@@ -38,8 +39,31 @@ public:
     auto rhs = node.rhs.visit(*this);
 
     if (lhs != ValueType::Double || rhs != ValueType::Double) {
-      error("Binary logical expression expects both operands having the same "
+      error("Comparison expression expects both operands having the same "
             "double type",
+            node.location);
+    }
+
+    return ValueType::Boolean;
+  }
+
+  ValueType operator()(const AST &, const NotExpression &node) {
+    auto child = node.child.visit(*this);
+
+    if (child != ValueType::Boolean) {
+      error("Not expression expects an operand of double type", node.location);
+    }
+
+    return ValueType::Boolean;
+  }
+
+  ValueType operator()(const AST &, const BinaryLogicalExpression &node) {
+    auto lhs = node.lhs.visit(*this);
+    auto rhs = node.rhs.visit(*this);
+
+    if (lhs != ValueType::Boolean || rhs != ValueType::Boolean) {
+      error("Binary logical expression expects both operands having the same "
+            "boolean type",
             node.location);
     }
 

@@ -38,11 +38,15 @@ namespace cheasle { class Lexer; }
 %token <BuiltInFunctionId> BUILTIN "built-in function"
 %token EOF 0 "end of file"
 %token IF ELSE WHILE CONST LET DEF
+%token NOT AND OR
 
-%nonassoc <BinaryLogicalOperator> BLOP
 %right '='
+%left OR
+%left AND
+%left <ComparisonOperator> CMP
 %left '+' '-'
 %left '*' '/'
+%right NOT
 %nonassoc '|' UMINUS
 
 %nterm <AST> exp stmt block
@@ -73,7 +77,10 @@ stmt: IF exp '{' block '}' ELSE '{' block '}'  { $$ = AST::make<IfExpression>(st
    | exp ';'
 ;
 
-exp: exp BLOP exp         { $$ = AST::make<ComparisonExpression>(std::move($1), std::move($3), $2, std::move(@$)); }
+exp: exp CMP exp          { $$ = AST::make<ComparisonExpression>(std::move($1), std::move($3), $2, std::move(@$)); }
+   | exp AND exp          { $$ = AST::make<BinaryLogicalExpression>(std::move($1), std::move($3), BinaryLogicalOperator::And, std::move(@$)); }
+   | exp OR exp           { $$ = AST::make<BinaryLogicalExpression>(std::move($1), std::move($3), BinaryLogicalOperator::Or, std::move(@$)); }
+   | NOT exp              { $$ = AST::make<NotExpression>(std::move($2), std::move(@$)); }
    | exp '+' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Add, std::move(@$)); }
    | exp '-' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Subtract, std::move(@$));}
    | exp '*' exp          { $$ = AST::make<BinaryExpression>(std::move($1), std::move($3), BinaryOperator::Multiply, std::move(@$)); }

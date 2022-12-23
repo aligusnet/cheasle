@@ -101,7 +101,7 @@ TEST_CASE("unary expression", "[ast-eval]") {
   }
 }
 
-void testLogicalExpression(double lhs, double rhs) {
+void testComparisonExpression(double lhs, double rhs) {
   {
     auto ast = TAST::gt(TAST::constant(lhs), TAST::constant(rhs));
     auto result = eval(ast);
@@ -151,16 +151,108 @@ void testLogicalExpression(double lhs, double rhs) {
   }
 }
 
-TEST_CASE("binary logical expression", "[ast-eval]") {
-  SECTION("1.0 <=> 5.0") { testLogicalExpression(1.0, 5.0); }
-  SECTION("-1.0 <=> -5.0") { testLogicalExpression(-1.0, -5.0); }
-  SECTION("1.0 <=> -5.0") { testLogicalExpression(1.0, -5.0); }
-  SECTION("-1.0 <=> 5.0") { testLogicalExpression(-1.0, 5.0); }
+TEST_CASE("comparison expression", "[ast-eval]") {
+  SECTION("1.0 <=> 5.0") { testComparisonExpression(1.0, 5.0); }
+  SECTION("-1.0 <=> -5.0") { testComparisonExpression(-1.0, -5.0); }
+  SECTION("1.0 <=> -5.0") { testComparisonExpression(1.0, -5.0); }
+  SECTION("-1.0 <=> 5.0") { testComparisonExpression(-1.0, 5.0); }
 
-  SECTION("11.0 <=> 11.0") { testLogicalExpression(11.0, 11.0); }
-  SECTION("-11.0 <=> -11.0") { testLogicalExpression(-11.0, -11.0); }
-  SECTION("11.0 <=> -11.0") { testLogicalExpression(11.0, -11.0); }
-  SECTION("-11.0 <=> 11.0") { testLogicalExpression(-11.0, 11.0); }
+  SECTION("11.0 <=> 11.0") { testComparisonExpression(11.0, 11.0); }
+  SECTION("-11.0 <=> -11.0") { testComparisonExpression(-11.0, -11.0); }
+  SECTION("11.0 <=> -11.0") { testComparisonExpression(11.0, -11.0); }
+  SECTION("-11.0 <=> 11.0") { testComparisonExpression(-11.0, 11.0); }
+}
+
+TEST_CASE("binary logical expression", "[ast-eval]") {
+  SECTION("true and true") {
+    auto ast = TAST::andexp(TAST::constant(true), TAST::constant(true));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == true);
+  }
+
+  SECTION("true and false") {
+    auto ast = TAST::andexp(TAST::constant(true), TAST::constant(false));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == false);
+  }
+
+  SECTION("false and true") {
+    auto ast = TAST::andexp(TAST::constant(false), TAST::constant(true));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == false);
+  }
+
+  SECTION("false and double") {
+    auto ast = TAST::andexp(TAST::constant(false), TAST::constant(10.0));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == false);
+  }
+
+  SECTION("true or true") {
+    auto ast = TAST::orexp(TAST::constant(true), TAST::constant(true));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == true);
+  }
+
+  SECTION("false or true") {
+    auto ast = TAST::orexp(TAST::constant(false), TAST::constant(true));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == true);
+  }
+
+  SECTION("true or false") {
+    auto ast = TAST::orexp(TAST::constant(true), TAST::constant(false));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == true);
+  }
+
+  SECTION("false or false") {
+    auto ast = TAST::orexp(TAST::constant(false), TAST::constant(false));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == false);
+  }
+
+  SECTION("true or double") {
+    auto ast = TAST::orexp(TAST::constant(true), TAST::constant(1.0));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == true);
+  }
+}
+
+TEST_CASE("not expression", "[ast-eval]") {
+  SECTION("not true") {
+    auto ast = TAST::notexp(TAST::constant(true));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == false);
+  }
+
+  SECTION("not false") {
+    auto ast = TAST::notexp(TAST::constant(false));
+    auto result = eval(ast);
+
+    REQUIRE_BOOL(result);
+    REQUIRE(std::get<bool>(*result) == true);
+  }
 }
 
 TEST_CASE("if expression", "[ast-eval]") {

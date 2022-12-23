@@ -9,25 +9,28 @@
 
 namespace cheasle {
 
-class BinaryExpression;
-class UnaryExpression;
-class ComparisonExpression;
-class ConstantValue;
-class Block;
-class IfExpression;
-class WhileExpression;
-class BuiltInFunction;
-class FunctionCall;
-class FunctionDefinition;
-class VariableDefinition;
-class AssignmentExpression;
-class NameReference;
+struct BinaryExpression;
+struct UnaryExpression;
+struct ComparisonExpression;
+struct BinaryLogicalExpression;
+struct NotExpression;
+struct ConstantValue;
+struct Block;
+struct IfExpression;
+struct WhileExpression;
+struct BuiltInFunction;
+struct FunctionCall;
+struct FunctionDefinition;
+struct VariableDefinition;
+struct AssignmentExpression;
+struct NameReference;
 
 using AST =
     mongodb::PolyValue<BinaryExpression, ComparisonExpression, UnaryExpression,
-                       ConstantValue, Block, IfExpression, WhileExpression,
-                       BuiltInFunction, FunctionDefinition, FunctionCall,
-                       VariableDefinition, AssignmentExpression, NameReference>;
+                       BinaryLogicalExpression, NotExpression, ConstantValue,
+                       Block, IfExpression, WhileExpression, BuiltInFunction,
+                       FunctionDefinition, FunctionCall, VariableDefinition,
+                       AssignmentExpression, NameReference>;
 
 enum class BinaryOperator { Add, Subtract, Multiply, Divide };
 
@@ -53,17 +56,39 @@ struct UnaryExpression {
   location location;
 };
 
-enum class BinaryLogicalOperator { EQ, NE, GT, GE, LT, LE };
+enum class ComparisonOperator { EQ, NE, GT, GE, LT, LE };
 
 struct ComparisonExpression {
-  ComparisonExpression(AST lhs, AST rhs, BinaryLogicalOperator op,
+  ComparisonExpression(AST lhs, AST rhs, ComparisonOperator op,
                        location location)
       : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
         location(std::move(location)) {}
 
   AST lhs;
   AST rhs;
+  ComparisonOperator op;
+  location location;
+};
+
+enum class BinaryLogicalOperator { And, Or };
+
+struct BinaryLogicalExpression {
+  BinaryLogicalExpression(AST lhs, AST rhs, BinaryLogicalOperator op,
+                          location location)
+      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
+        location(std::move(location)) {}
+
+  AST lhs;
+  AST rhs;
   BinaryLogicalOperator op;
+  location location;
+};
+
+struct NotExpression {
+  NotExpression(AST child, location location)
+      : child(std::move(child)), location(std::move(location)) {}
+
+  AST child;
   location location;
 };
 
@@ -178,6 +203,7 @@ struct NameReference {
 
 std::ostream &operator<<(std::ostream &os, BinaryOperator op);
 std::ostream &operator<<(std::ostream &os, UnaryOperator op);
+std::ostream &operator<<(std::ostream &os, ComparisonOperator op);
 std::ostream &operator<<(std::ostream &os, BinaryLogicalOperator op);
 std::ostream &operator<<(std::ostream &os, BuiltInFunctionId id);
 std::ostream &operator<<(std::ostream &os, const AST &ast);

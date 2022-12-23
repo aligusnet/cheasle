@@ -30,6 +30,20 @@ struct ASTPrinter {
     _os << ')';
   }
 
+  void operator()(const AST &, const BinaryLogicalExpression &node) {
+    _os << '(';
+    node.lhs.visit(*this);
+    _os << ' ' << node.op << ' ';
+    node.rhs.visit(*this);
+    _os << ')';
+  }
+
+  void operator()(const AST &, const NotExpression &node) {
+    _os << "(not ";
+    node.child.visit(*this);
+    _os << ')';
+  }
+
   void operator()(const AST &, const ConstantValue &node) { _os << node.value; }
 
   void operator()(const AST &, const Block &node) {
@@ -147,25 +161,38 @@ std::ostream &operator<<(std::ostream &os, UnaryOperator op) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, BinaryLogicalOperator op) {
+std::ostream &operator<<(std::ostream &os, ComparisonOperator op) {
   switch (op) {
-  case BinaryLogicalOperator::EQ:
+  case ComparisonOperator::EQ:
     os << "==";
     break;
-  case BinaryLogicalOperator::NE:
+  case ComparisonOperator::NE:
     os << "!=";
     break;
-  case BinaryLogicalOperator::GT:
+  case ComparisonOperator::GT:
     os << ">";
     break;
-  case BinaryLogicalOperator::GE:
+  case ComparisonOperator::GE:
     os << ">=";
     break;
-  case BinaryLogicalOperator::LT:
+  case ComparisonOperator::LT:
     os << "<";
     break;
-  case BinaryLogicalOperator::LE:
+  case ComparisonOperator::LE:
     os << "<=";
+    break;
+  }
+
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, BinaryLogicalOperator op) {
+  switch (op) {
+  case BinaryLogicalOperator::And:
+    os << "and";
+    break;
+  case BinaryLogicalOperator::Or:
+    os << "or";
     break;
   }
 

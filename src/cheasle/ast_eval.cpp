@@ -57,23 +57,23 @@ struct EvalWalker {
     auto lhs = getDouble(node.lhs.visit(*this));
     auto rhs = getDouble(node.rhs.visit(*this));
     if (!lhs || !rhs) {
-      error("Binary logical expression expects both arguments of type double",
+      error("Comparison expression expects both arguments of type double",
             node.location);
       return std::nullopt;
     }
 
     switch (node.op) {
-    case BinaryLogicalOperator::EQ:
+    case ComparisonOperator::EQ:
       return *lhs == *rhs;
-    case BinaryLogicalOperator::NE:
+    case ComparisonOperator::NE:
       return *lhs != *rhs;
-    case BinaryLogicalOperator::GT:
+    case ComparisonOperator::GT:
       return *lhs > *rhs;
-    case BinaryLogicalOperator::GE:
+    case ComparisonOperator::GE:
       return *lhs >= *rhs;
-    case BinaryLogicalOperator::LT:
+    case ComparisonOperator::LT:
       return *lhs < *rhs;
-    case BinaryLogicalOperator::LE:
+    case ComparisonOperator::LE:
       return *lhs <= *rhs;
     }
 
@@ -98,6 +98,59 @@ struct EvalWalker {
 
     error("Unkwnown unary operator", node.location);
     return std::nullopt;
+  }
+
+  std::optional<Value> operator()(const AST &,
+                                  const BinaryLogicalExpression &node) {
+    auto lhs = getBool(node.lhs.visit(*this));
+    if (!lhs) {
+      error("Binary logical expression expects first argument of type bool",
+            node.location);
+      return std::nullopt;
+    }
+
+    switch (node.op) {
+    case BinaryLogicalOperator::And:
+      if (!(*lhs)) {
+        return false;
+      }
+
+      break;
+    case BinaryLogicalOperator::Or:
+      if (*lhs) {
+        return true;
+      }
+
+      break;
+    }
+
+    auto rhs = getBool(node.rhs.visit(*this));
+    if (!rhs) {
+      error("Binary logical expression expects second argument of type bool",
+            node.location);
+      return std::nullopt;
+    }
+
+    switch (node.op) {
+    case BinaryLogicalOperator::And:
+      // lhs is expected to be true here.
+      return *rhs;
+    case BinaryLogicalOperator::Or:
+      // lhs is expected to be false here.
+      return *rhs;
+    }
+
+    return std::nullopt;
+  }
+
+  std::optional<Value> operator()(const AST &, const NotExpression &node) {
+    auto child = getBool(node.child.visit(*this));
+    if (!child) {
+      error("Not expression expects its argument of type bool", node.location);
+      return std::nullopt;
+    }
+
+    return !*child;
   }
 
   std::optional<Value> operator()(const AST &, const ConstantValue &node) {

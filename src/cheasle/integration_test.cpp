@@ -51,7 +51,6 @@ Value execute(const std::string &code, const std::string &testName,
   }
 
   REQUIRE_FALSE(typeCheckerErrors.hasErrors());
-  REQUIRE(type == ValueType::Double);
 
   cheasle::ErrorList evalErrors{};
   auto result = eval(ast, evalErrors, std::cout);
@@ -106,6 +105,20 @@ TEST_CASE("Sqrt", "[integration]") {
       "mySqrt(arg);\n";
   auto result = execute(code, "sqrt", false);
   REQUIRE_THAT(std::get<double>(result), WithinRel(sqrt(171.0), 1e-4));
+}
+
+TEST_CASE("Within", "[integration]") {
+  std::string code =
+      "def within(begin: double, end: double, value: double): bool {\n"
+      "  value >= begin and value < end;\n"
+      "}\n"
+      "def within2(begin: double, end: double, value: double): bool {\n"
+      "  not (value < begin or value >= end);\n"
+      "}\n"
+      "within(5.0, 10.0, 7.0) and within2(5.0, 10.0, 7.0);\n";
+
+  auto result = execute(code, "within", false);
+  REQUIRE(std::get<bool>(result) == true);
 }
 
 }; // namespace cheasle

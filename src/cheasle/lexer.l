@@ -37,13 +37,18 @@ float -?([0-9]*[.])?[0-9]+
 "(" |
 ")"     { return cheasle::Parser::symbol_type(chr(), location()); }
 
- /* comparison ops, all are a CMP token */
-">"     { return cheasle::Parser::make_BLOP(BinaryLogicalOperator::GT, location()); }
-"<"     { return cheasle::Parser::make_BLOP(BinaryLogicalOperator::LT, location()); }
-"!="    { return cheasle::Parser::make_BLOP(BinaryLogicalOperator::NE, location()); }
-"=="    { return cheasle::Parser::make_BLOP(BinaryLogicalOperator::EQ, location()); }
-">="    { return cheasle::Parser::make_BLOP(BinaryLogicalOperator::GE, location()); }
-"<="    { return cheasle::Parser::make_BLOP(BinaryLogicalOperator::LE, location()); }
+/* comparison ops, all are a CMP token */
+">"     { return cheasle::Parser::make_CMP(ComparisonOperator::GT, location()); }
+"<"     { return cheasle::Parser::make_CMP(ComparisonOperator::LT, location()); }
+"!="    { return cheasle::Parser::make_CMP(ComparisonOperator::NE, location()); }
+"=="    { return cheasle::Parser::make_CMP(ComparisonOperator::EQ, location()); }
+">="    { return cheasle::Parser::make_CMP(ComparisonOperator::GE, location()); }
+"<="    { return cheasle::Parser::make_CMP(ComparisonOperator::LE, location()); }
+
+/* logical operations */
+"and"   { return cheasle::Parser::make_AND(location()); }
+"or"   { return cheasle::Parser::make_OR(location()); }
+"not"   { return cheasle::Parser::make_NOT(location()); }
 
 {float} { return cheasle::Parser::make_VALUE(atof(text()), location()); }
 "true"  { return cheasle::Parser::make_VALUE(true, location()); }

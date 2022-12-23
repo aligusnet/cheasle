@@ -37,6 +37,57 @@ TEST_CASE("addition expression", "[parser]") {
   REQUIRE_AST(expected, ast);
 }
 
+TEST_CASE("comparison expression", "[parser]") {
+  SECTION("gt") {
+    std::string code = "5 > 10;";
+    auto ast = parse(code);
+
+    auto expected = TAST::gt(TAST::constant(5.0), TAST::constant(10.0));
+
+    REQUIRE_AST(expected, ast);
+  }
+  SECTION("ne") {
+    std::string code = "5 != 10;";
+    auto ast = parse(code);
+
+    auto expected = TAST::ne(TAST::constant(5.0), TAST::constant(10.0));
+
+    REQUIRE_AST(expected, ast);
+  }
+}
+
+TEST_CASE("binary logical expression", "[parser]") {
+  SECTION("and") {
+    std::string code = "a and b;";
+
+    auto ast = parse(code);
+
+    auto expected = TAST::andexp(TAST::ref("a"), TAST::ref("b"));
+
+    REQUIRE_AST(expected, ast);
+  }
+
+  SECTION("or") {
+    std::string code = "a or b;";
+
+    auto ast = parse(code);
+
+    auto expected = TAST::orexp(TAST::ref("a"), TAST::ref("b"));
+
+    REQUIRE_AST(expected, ast);
+  }
+}
+
+TEST_CASE("not expression", "[parser]") {
+  std::string code = "not a;";
+
+  auto ast = parse(code);
+
+  auto expected = TAST::notexp(TAST::ref("a"));
+
+  REQUIRE_AST(expected, ast);
+}
+
 TEST_CASE("arithmetic expression", "[parser]") {
   std::string code = "5 - 10 * -a / |c|;";
   auto ast = parse(code);

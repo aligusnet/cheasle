@@ -139,6 +139,57 @@ TEST_CASE("comparison expressions", "[type-checker]") {
   }
 }
 
+TEST_CASE("binary logical expressions", "[type-checker]") {
+  SECTION("bool and bool") {
+    auto ast = TAST::andexp(TAST::constant(true), TAST::constant(false));
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("double and bool") {
+    auto ast = TAST::andexp(TAST::constant(10.0), TAST::constant(false));
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("bool and double") {
+    auto ast = TAST::andexp(TAST::constant(true), TAST::constant(10.0));
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("bool or bool") {
+    auto ast = TAST::orexp(TAST::constant(true), TAST::constant(false));
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("double or bool") {
+    auto ast = TAST::orexp(TAST::constant(10.0), TAST::constant(false));
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("bool or double") {
+    auto ast = TAST::orexp(TAST::constant(true), TAST::constant(10.0));
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+}
+
+TEST_CASE("not expressions", "[type-checker]") {
+  SECTION("not bool") {
+    auto ast = TAST::notexp(TAST::constant(false));
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+  SECTION("not double") {
+    auto ast = TAST::notexp(TAST::constant(11.0));
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+}
+
 TEST_CASE("block", "[type-checker]") {
   auto ast = TAST::b(
       {TAST::constant(10.0), TAST::constant(11.0), TAST::constant(false)});
