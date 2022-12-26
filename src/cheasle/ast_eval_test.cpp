@@ -11,15 +11,6 @@ namespace cheasle {
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::WithinRel;
 
-template <typename T> void requireType(const std::optional<Value> &val) {
-  REQUIRE(val);
-  REQUIRE(std::get_if<T>(&*val) != nullptr);
-}
-
-#define REQUIRE_DOUBLE(val) requireType<double>((val));
-
-#define REQUIRE_BOOL(val) requireType<bool>((val));
-
 std::optional<Value> eval(const AST &node) {
   std::ostringstream oss;
   ErrorList errors;

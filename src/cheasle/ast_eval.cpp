@@ -1,5 +1,6 @@
 #include "ast_eval.h"
 #include "cheasle/ast.h"
+#include "cheasle/symbol.h"
 #include "cheasle/symbol_table.h"
 #include "location.h"
 #include <optional>
@@ -24,9 +25,17 @@ std::optional<double> getDouble(const std::optional<Value> &val) {
   return std::nullopt;
 }
 
-struct EvalWalker {
-  EvalWalker(SymbolTable symbolTable, ErrorList &errors, std::ostream &os)
-      : _symbolTable(std::move(symbolTable)), _errors(errors), _os(os) {}
+class EvalWalker {
+private:
+  EvalWalker(SymbolTable<VariableSymbol> variables,
+             SymbolTable<FunctionSymbol> functions, ErrorList &errors,
+             std::ostream &os)
+      : _variables(std::move(variables)), _functions(std::move(functions)),
+        _errors(errors), _os(os) {}
+
+public:
+  EvalWalker(ErrorList &errors, std::ostream &os)
+      : _variables("global"), _functions("global"), _errors(errors), _os(os) {}
 
   std::optional<Value> operator()(const AST &, const BinaryExpression &node) {
     auto lhs = getDouble(node.lhs.visit(*this));
@@ -232,13 +241,13 @@ struct EvalWalker {
   }
 
   std::optional<Value> operator()(const AST &, const FunctionDefinition &node) {
-    _symbolTable.define(
+    _functions.define(
         node.name, FunctionSymbol{node.returnType, node.arguments, node.code});
     return 0.0;
   }
 
   std::optional<Value> operator()(const AST &, const FunctionCall &node) {
-    auto funcOpt = _symbolTable.getFunction(node.name);
+    auto funcOpt = _functions.get(node.name);
     if (!funcOpt) {
       error("Unknown function " + node.name, node.location);
       return std::nullopt;
@@ -250,10 +259,11 @@ struct EvalWalker {
       return std::nullopt;
     }
 
-    std::vector<ValueSymbol> values;
+    std::vector<VariableSymbol> values;
     values.reserve(node.arguments.size());
 
-    SymbolTable childTable{&_symbolTable};
+    SymbolTable<VariableSymbol> variables{node.name, &_variables};
+    SymbolTable<FunctionSymbol> functions{node.name, &_functions};
     for (size_t i = 0; i < funcOpt->arguments.size(); ++i) {
       auto value = node.arguments[i].visit(*this);
       if (!value) {
@@ -261,16 +271,17 @@ struct EvalWalker {
       }
 
       values.emplace_back();
-      childTable.define(funcOpt->arguments[i].name,
-                        ValueSymbol{funcOpt->arguments[i].type, *value, false});
+      variables.define(
+          funcOpt->arguments[i].name,
+          VariableSymbol{funcOpt->arguments[i].type, *value, false});
     }
 
-    EvalWalker eval{childTable, _errors, _os};
+    EvalWalker eval{std::move(variables), std::move(functions), _errors, _os};
     return funcOpt->code.visit(eval);
   }
 
   std::optional<Value> operator()(const AST &, const VariableDefinition &node) {
-    if (_symbolTable.isDefined(node.name)) {
+    if (_variables.isLocallyDefined(node.name)) {
       error("Variable " + node.name +
                 " is already defined in the current scope.",
             node.location);
@@ -281,8 +292,8 @@ struct EvalWalker {
     if (!value) {
       return std::nullopt;
     }
-    _symbolTable.define(node.name,
-                        ValueSymbol{node.type, *value, node.isConstant});
+    _variables.define(node.name,
+                      VariableSymbol{node.type, *value, node.isConstant});
     return value;
   }
 
@@ -293,7 +304,16 @@ struct EvalWalker {
       return std::nullopt;
     }
 
-    if (!_symbolTable.assign(node.name, *value)) {
+    auto valueSymbol = _variables.get(node.name);
+    if (!valueSymbol) {
+      std::ostringstream oss;
+      oss << "Failed to assign variable " << node.name << " to " << *value;
+      error(oss.str(), node.location);
+      return std::nullopt;
+    }
+
+    valueSymbol->value = std::move(*value);
+    if (!_variables.assign(node.name, std::move(*valueSymbol))) {
       std::ostringstream oss;
       oss << "Failed to assign variable " << node.name << " to " << *value;
       error(oss.str(), node.location);
@@ -304,9 +324,9 @@ struct EvalWalker {
   }
 
   std::optional<Value> operator()(const AST &, const NameReference &node) {
-    auto value = _symbolTable.getValue(node.name);
-    if (value) {
-      return *value;
+    auto valueSymbol = _variables.get(node.name);
+    if (valueSymbol) {
+      return valueSymbol->value;
     } else {
       error("Unknown name: " + node.name, node.location);
       return std::nullopt;
@@ -381,7 +401,8 @@ struct EvalWalker {
     _errors.append("ast-eval", std::move(message), std::move(location));
   }
 
-  SymbolTable _symbolTable;
+  SymbolTable<VariableSymbol> _variables;
+  SymbolTable<FunctionSymbol> _functions;
   ErrorList &_errors;
   std::ostream &_os;
 };
@@ -389,8 +410,7 @@ struct EvalWalker {
 
 std::optional<Value> eval(const AST &node, ErrorList &errors,
                           std::ostream &os) {
-  SymbolTable symbolTable{};
-  EvalWalker ew{std::move(symbolTable), errors, os};
+  EvalWalker ew{errors, os};
   return node.visit(ew);
 }
 

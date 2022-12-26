@@ -2,6 +2,8 @@
 #include <Catch2/catch_amalgamated.hpp>
 #include <cheasle/ast.h>
 
+#include <variant>
+
 namespace cheasle {
 class TAST {
 public:
@@ -31,6 +33,12 @@ public:
   static inline AST div(AST lhs, AST rhs) {
     return AST::make<BinaryExpression>(std::move(lhs), std::move(rhs),
                                        BinaryOperator::Divide, loc);
+  }
+
+  static inline AST add(std::string lhs, std::string rhs) {
+    return AST::make<BinaryExpression>(TAST::ref(std::move(lhs)),
+                                       TAST::ref(std::move(rhs)),
+                                       BinaryOperator::Add, loc);
   }
 
   static inline AST ref(std::string name) {
@@ -76,6 +84,26 @@ public:
                                            ComparisonOperator::GE, loc);
   }
 
+  static inline AST lt(double lhs, double rhs) {
+    return AST::make<ComparisonExpression>(
+        TAST::constant(lhs), TAST::constant(rhs), ComparisonOperator::LT, loc);
+  }
+
+  static inline AST le(double lhs, double rhs) {
+    return AST::make<ComparisonExpression>(
+        TAST::constant(lhs), TAST::constant(rhs), ComparisonOperator::LE, loc);
+  }
+
+  static inline AST gt(double lhs, double rhs) {
+    return AST::make<ComparisonExpression>(
+        TAST::constant(lhs), TAST::constant(rhs), ComparisonOperator::GT, loc);
+  }
+
+  static inline AST ge(double lhs, double rhs) {
+    return AST::make<ComparisonExpression>(
+        TAST::constant(lhs), TAST::constant(rhs), ComparisonOperator::GE, loc);
+  }
+
   static inline AST eq(AST lhs, AST rhs) {
     return AST::make<EqualityExpression>(std::move(lhs), std::move(rhs),
                                          EqualityOperator::EQ, loc);
@@ -84,6 +112,26 @@ public:
   static inline AST ne(AST lhs, AST rhs) {
     return AST::make<EqualityExpression>(std::move(lhs), std::move(rhs),
                                          EqualityOperator::NE, loc);
+  }
+
+  static inline AST eq(double lhs, double rhs) {
+    return AST::make<EqualityExpression>(
+        TAST::constant(lhs), TAST::constant(rhs), EqualityOperator::EQ, loc);
+  }
+
+  static inline AST ne(double lhs, double rhs) {
+    return AST::make<EqualityExpression>(
+        TAST::constant(lhs), TAST::constant(rhs), EqualityOperator::NE, loc);
+  }
+
+  static inline AST eq(bool lhs, bool rhs) {
+    return AST::make<EqualityExpression>(
+        TAST::constant(lhs), TAST::constant(rhs), EqualityOperator::EQ, loc);
+  }
+
+  static inline AST ne(bool lhs, bool rhs) {
+    return AST::make<EqualityExpression>(
+        TAST::constant(lhs), TAST::constant(rhs), EqualityOperator::NE, loc);
   }
 
   static inline AST andexp(AST lhs, AST rhs) {
@@ -163,4 +211,13 @@ private:
 void requireAst(const AST &expected, const AST &actual);
 
 #define REQUIRE_AST(expected, actual) requireAst((expected), (actual))
+
+template <typename T> void requireType(const std::optional<Value> &val) {
+  REQUIRE(val);
+  REQUIRE(std::get_if<T>(&*val) != nullptr);
+}
+
+#define REQUIRE_DOUBLE(val) requireType<double>((val))
+
+#define REQUIRE_BOOL(val) requireType<bool>((val))
 } // namespace cheasle

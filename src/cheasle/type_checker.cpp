@@ -1,5 +1,6 @@
 #include "type_checker.h"
 #include "cheasle/ast.h"
+#include <cheasle/symbol.h>
 #include <cheasle/symbol_table.h>
 #include <sstream>
 
@@ -7,8 +8,9 @@ namespace cheasle {
 
 class TypeChecker {
 public:
-  TypeChecker(SymbolTable &symbolTable, ErrorList &errorList)
-      : _symbolTable(symbolTable), _errors(errorList) {}
+  TypeChecker(SymbolTable<VariableSymbol> &variables,
+              SymbolTable<FunctionSymbol> &functions, ErrorList &errorList)
+      : _variables(variables), _functions(functions), _errors(errorList) {}
 
   ValueType operator()(const AST &, const BinaryExpression &node) {
     auto lhs = node.lhs.visit(*this);
@@ -173,7 +175,7 @@ public:
   }
 
   ValueType operator()(const AST &, const FunctionCall &node) {
-    auto func = _symbolTable.getFunction(node.name);
+    auto func = _functions.get(node.name);
     if (!func) {
       error("Function <" + node.name + "> is undefined", node.location);
       return ValueType::Double;
@@ -203,15 +205,16 @@ public:
   }
 
   ValueType operator()(const AST &, const FunctionDefinition &node) {
-    _symbolTable.define(
+    _functions.define(
         node.name, FunctionSymbol{node.returnType, node.arguments, node.code});
 
-    SymbolTable funcSymbolTable{&_symbolTable};
+    SymbolTable<VariableSymbol> variables{node.name, &_variables};
+    SymbolTable<FunctionSymbol> functions{node.name, &_functions};
     for (const auto &arg : node.arguments) {
-      funcSymbolTable.define(arg.name, ValueSymbol{arg.type, Value{}, false});
+      variables.define(arg.name, VariableSymbol{arg.type, Value{}, false});
     }
 
-    TypeChecker funcTypeChecker{funcSymbolTable, _errors};
+    TypeChecker funcTypeChecker{variables, functions, _errors};
     auto returnType = node.code.visit(funcTypeChecker);
     if (node.returnType != returnType) {
       std::ostringstream oss;
@@ -232,14 +235,14 @@ public:
       error(oss.str(), node.location);
     }
 
-    _symbolTable.define(node.name,
-                        ValueSymbol{node.type, Value{}, node.isConstant});
+    _variables.define(node.name,
+                      VariableSymbol{node.type, Value{}, node.isConstant});
     return node.type;
   }
 
   ValueType operator()(const AST &, const AssignmentExpression &node) {
     auto type = node.expr.visit(*this);
-    auto varInfo = _symbolTable.getVariable(node.name);
+    auto varInfo = _variables.get(node.name);
     if (!varInfo) {
       error("Unknown variable " + node.name, node.location);
       return type;
@@ -260,7 +263,7 @@ public:
   }
 
   ValueType operator()(const AST &, const NameReference &node) {
-    auto varInfo = _symbolTable.getVariable(node.name);
+    auto varInfo = _variables.get(node.name);
     if (!varInfo) {
       error("Unknown variable " + node.name, node.location);
       return ValueType::Double;
@@ -274,13 +277,15 @@ private:
     _errors.append("type-checkerÍ", std::move(message), std::move(location));
   }
 
-  SymbolTable &_symbolTable;
+  SymbolTable<VariableSymbol> &_variables;
+  SymbolTable<FunctionSymbol> &_functions;
   ErrorList &_errors;
 };
 
 ValueType checkTypes(const AST &ast, ErrorList &errors) {
-  SymbolTable symbolTable{};
-  TypeChecker typeChecker{symbolTable, errors};
+  SymbolTable<VariableSymbol> variables{"global"};
+  SymbolTable<FunctionSymbol> functions{"global"};
+  TypeChecker typeChecker{variables, functions, errors};
   return ast.visit(typeChecker);
 }
 } // namespace cheasle
