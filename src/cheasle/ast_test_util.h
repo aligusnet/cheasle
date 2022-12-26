@@ -219,6 +219,11 @@ public:
                                       std::vector<AST>{std::move(arg)}, loc);
   }
 
+  static inline AST print(std::vector<AST> args) {
+    return AST::make<BuiltInFunction>(BuiltInFunctionId::Print, std::move(args),
+                                      loc);
+  }
+
 private:
   static const location loc;
 };

@@ -22,6 +22,25 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stdarg.h>
+
+extern "C" double cheaslePrint(int count, ...) {
+  double val;
+  va_list args;
+  va_start(args, count);
+  for (int i = 0; i < count; ++i) {
+    val = va_arg(args, double);
+    if (i != 0) {
+      std::cout << ' ';
+    }
+    std::cout << val;
+  }
+  va_end(args);
+
+  std::cout << std::endl;
+
+  return val;
+}
 
 namespace cheasle {
 class CodeGenerator {
@@ -34,6 +53,7 @@ public:
     setBuiltinMathFunction("sqrt");
     setBuiltinMathFunction("log");
     setBuiltinMathFunction("exp");
+    setBuiltinPrintFunction();
   }
 
   llvm::Value *operator()(const AST &, const BinaryExpression &node) {
@@ -127,8 +147,7 @@ public:
       return callFunction("log", node.arguments, node.location);
       break;
     case BuiltInFunctionId::Print:
-      error("BuiltIn Function print is not implemented", node.location);
-      return nullptr;
+      return callPrint(node.arguments, node.location);
       break;
     }
 
@@ -240,6 +259,46 @@ private:
           name, ValueType::Double, {FunctionArgument{"x", ValueType::Double}});
       _functions.define(name, func);
     }
+  }
+
+  void setBuiltinPrintFunction() {
+    std::string name = "print";
+    auto optFunc = _functions.get(name);
+    if (!optFunc) {
+      std::vector<llvm::Type *> argTypes{llvm::Type::getInt32Ty(_context)};
+      auto *functionType = llvm::FunctionType::get(
+          getLlvmType(ValueType::Double), argTypes, /*isVarArg*/ true);
+      auto *function =
+          llvm::Function::Create(functionType, llvm::Function::ExternalLinkage,
+                                 "cheaslePrint", _module);
+      _functions.define(name, function);
+      for (auto &arg : function->args()) {
+        arg.setName("count");
+      }
+    }
+  }
+
+  llvm::Value *callPrint(const std::vector<AST> &arguments, location location) {
+    std::string name = "print";
+    auto optFunction = _functions.get(name);
+    if (!optFunction || *optFunction == nullptr) {
+      error("Function <" + name + "> is unknown", location);
+      return nullptr;
+    }
+
+    auto function = *optFunction;
+    std::vector<llvm::Value *> argValues{};
+    argValues.reserve(arguments.size() + 1);
+    argValues.emplace_back(llvm::ConstantInt::getSigned(
+        llvm::Type::getInt32Ty(_context), arguments.size()));
+    for (const auto &arg : arguments) {
+      argValues.push_back(arg.visit(*this));
+      if (argValues.back() == nullptr) {
+        return nullptr;
+      }
+    }
+
+    return _builder.CreateCall(function, std::move(argValues), "call");
   }
 
   llvm::Value *callFunction(const std::string &name,
