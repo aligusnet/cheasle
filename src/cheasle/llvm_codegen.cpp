@@ -29,7 +29,12 @@ public:
   CodeGenerator(ErrorList &errors, llvm::LLVMContext &context,
                 llvm::Module &module, llvm::IRBuilder<> &builder)
       : _errors(errors), _context(context), _module(module), _builder(builder),
-        _namedValues("global"), _functions("global") {}
+        _namedValues("global"), _functions("global") {
+    // Set BuiltIn functions.
+    setBuiltinMathFunction("sqrt");
+    setBuiltinMathFunction("log");
+    setBuiltinMathFunction("exp");
+  }
 
   llvm::Value *operator()(const AST &, const BinaryExpression &node) {
     auto lhs = node.lhs.visit(*this);
@@ -111,41 +116,28 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const BuiltInFunction &node) {
-    error("BuiltInFunction not implemented", node.location);
+    switch (node.id) {
+    case BuiltInFunctionId::Sqrt:
+      return callFunction("sqrt", node.arguments, node.location);
+      break;
+    case BuiltInFunctionId::Exp:
+      return callFunction("exp", node.arguments, node.location);
+      break;
+    case BuiltInFunctionId::Log:
+      return callFunction("log", node.arguments, node.location);
+      break;
+    case BuiltInFunctionId::Print:
+      error("BuiltIn Function print is not implemented", node.location);
+      return nullptr;
+      break;
+    }
+
+    error("BuiltInFunction is not implemented", node.location);
     return nullptr;
   }
 
   llvm::Value *operator()(const AST &, const FunctionCall &node) {
-    auto optFunction = _functions.get(node.name);
-    if (!optFunction || *optFunction == nullptr) {
-      error("Function <" + node.name + "> is unknown", node.location);
-      return nullptr;
-    }
-
-    auto function = *optFunction;
-
-    if (function->arg_size() != node.arguments.size()) {
-      error("Incorrect number of arguments passed to function <" + node.name +
-                ">",
-            node.location);
-      return nullptr;
-    }
-
-    /*CodeGenerator callCodeGen{*this};
-    size_t argIndex = 0;
-    for (const auto &arg : function->args()) {
-      callCodeGen._namedValues.set(std::string(arg.getName()),
-                                   node.arguments[argIndex++].visit(*this));
-    }*/
-    std::vector<llvm::Value *> argValues{};
-    argValues.reserve(node.arguments.size());
-    for (const auto &arg : node.arguments) {
-      argValues.push_back(arg.visit(*this));
-      if (argValues.back() == nullptr) {
-        return nullptr;
-      }
-    }
-    return _builder.CreateCall(function, std::move(argValues), "call");
+    return callFunction(node.name, node.arguments, node.location);
   }
 
   llvm::Value *operator()(const AST &, const FunctionDefinition &node) {
@@ -239,6 +231,43 @@ private:
     }
 
     return function;
+  }
+
+  void setBuiltinMathFunction(const std::string &name) {
+    auto optFunc = _functions.get(name);
+    if (!optFunc) {
+      auto func = generateFunctionPrototype(
+          name, ValueType::Double, {FunctionArgument{"x", ValueType::Double}});
+      _functions.define(name, func);
+    }
+  }
+
+  llvm::Value *callFunction(const std::string &name,
+                            const std::vector<AST> &arguments,
+                            const location &location) {
+    auto optFunction = _functions.get(name);
+    if (!optFunction || *optFunction == nullptr) {
+      error("Function <" + name + "> is unknown", location);
+      return nullptr;
+    }
+
+    auto function = *optFunction;
+
+    if (function->arg_size() != arguments.size()) {
+      error("Incorrect number of arguments passed to function <" + name + ">",
+            location);
+      return nullptr;
+    }
+
+    std::vector<llvm::Value *> argValues{};
+    argValues.reserve(arguments.size());
+    for (const auto &arg : arguments) {
+      argValues.push_back(arg.visit(*this));
+      if (argValues.back() == nullptr) {
+        return nullptr;
+      }
+    }
+    return _builder.CreateCall(function, std::move(argValues), "call");
   }
 
   void error(const std::string &message, location location) {

@@ -204,6 +204,21 @@ public:
     return AST::make<BuiltInFunction>(id, std::move(args), loc);
   }
 
+  static inline AST sqrt(AST arg) {
+    return AST::make<BuiltInFunction>(BuiltInFunctionId::Sqrt,
+                                      std::vector<AST>{std::move(arg)}, loc);
+  }
+
+  static inline AST exp(AST arg) {
+    return AST::make<BuiltInFunction>(BuiltInFunctionId::Exp,
+                                      std::vector<AST>{std::move(arg)}, loc);
+  }
+
+  static inline AST log(AST arg) {
+    return AST::make<BuiltInFunction>(BuiltInFunctionId::Log,
+                                      std::vector<AST>{std::move(arg)}, loc);
+  }
+
 private:
   static const location loc;
 };

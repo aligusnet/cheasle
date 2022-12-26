@@ -111,4 +111,24 @@ TEST_CASE("nested user functions", "[llvm jit]") {
   REQUIRE(result);
   REQUIRE_THAT(std::get<double>(*result), WithinRel(28.0, 1e-8));
 }
+
+TEST_CASE("builtin function", "[llvm jit]") {
+  SECTION("sqrt") {
+    auto ast = TAST::sqrt(TAST::constant(10.0));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(sqrt(10.0), 1e-8));
+  }
+
+  SECTION("exp") {
+    auto ast = TAST::exp(TAST::constant(10.0));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(exp(10.0), 1e-8));
+  }
+
+  SECTION("log") {
+    auto ast = TAST::log(TAST::constant(10.0));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(log(10.0), 1e-8));
+  }
+}
 } // namespace cheasle
