@@ -165,4 +165,56 @@ TEST_CASE("Unary expression", "[llvm jit]") {
     REQUIRE_THAT(result, WithinRel(-10.1, 1e-8));
   }
 }
+
+TEST_CASE("Equality expressions", "[llvm jit]") {
+  SECTION("double == double") {
+    auto ast = TAST::eq(TAST::constant(10.1), TAST::constant(10.2));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+
+  SECTION("bool == bool") {
+    auto ast = TAST::eq(TAST::constant(true), TAST::constant(false));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+
+  SECTION("double != double") {
+    auto ast = TAST::ne(TAST::constant(10.1), TAST::constant(10.2));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+
+  SECTION("bool != bool") {
+    auto ast = TAST::ne(TAST::constant(true), TAST::constant(false));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+}
+
+TEST_CASE("Comparison expressions", "[llvm jit]") {
+  SECTION("double >= double") {
+    auto ast = TAST::ge(TAST::constant(10.1), TAST::constant(10.1));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+
+  SECTION("double > double") {
+    auto ast = TAST::gt(TAST::constant(10.1), TAST::constant(10.1));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+
+  SECTION("double <= double") {
+    auto ast = TAST::le(TAST::constant(10.1), TAST::constant(10.1));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+
+  SECTION("double < double") {
+    auto ast = TAST::lt(TAST::constant(10.1), TAST::constant(10.1));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+}
 } // namespace cheasle

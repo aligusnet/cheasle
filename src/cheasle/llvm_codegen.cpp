@@ -114,12 +114,72 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const EqualityExpression &node) {
-    error("EqualityExpression not implemented", node.location);
+    auto lhs = node.lhs.visit(*this);
+    auto rhs = node.rhs.visit(*this);
+    if (lhs == nullptr || rhs == nullptr) {
+      return nullptr;
+    }
+
+    auto lhsType = lhs->getType();
+    auto rhsType = rhs->getType();
+    if (lhsType->getTypeID() != rhsType->getTypeID()) {
+      error("Both operands of equality expression are exptected to be the same "
+            "type.",
+            node.location);
+      return nullptr;
+    }
+
+    if (lhsType->isFloatingPointTy()) {
+      switch (node.op) {
+      case EqualityOperator::EQ:
+        return _builder.CreateFCmpOEQ(lhs, rhs);
+      case EqualityOperator::NE:
+        return _builder.CreateFCmpONE(lhs, rhs);
+      }
+    } else if (lhsType->isIntegerTy()) {
+      switch (node.op) {
+      case EqualityOperator::EQ:
+        return _builder.CreateICmpEQ(lhs, rhs);
+      case EqualityOperator::NE:
+        return _builder.CreateICmpNE(lhs, rhs);
+      }
+    }
+
+    error("EqualityExpression for these operands are not supported",
+          node.location);
     return nullptr;
   }
 
   llvm::Value *operator()(const AST &, const ComparisonExpression &node) {
-    error("ComparisonExpression not implemented", node.location);
+    auto lhs = node.lhs.visit(*this);
+    auto rhs = node.rhs.visit(*this);
+    if (lhs == nullptr || rhs == nullptr) {
+      return nullptr;
+    }
+
+    auto lhsType = lhs->getType();
+    auto rhsType = rhs->getType();
+    if (lhsType->getTypeID() != rhsType->getTypeID() ||
+        !lhsType->isFloatingPointTy()) {
+      error(
+          "Both operands of comparison expression are exptected to be the same "
+          "type of double.",
+          node.location);
+      return nullptr;
+    }
+
+    switch (node.op) {
+    case ComparisonOperator::GE:
+      return _builder.CreateFCmpOGE(lhs, rhs);
+    case ComparisonOperator::GT:
+      return _builder.CreateFCmpOGT(lhs, rhs);
+    case ComparisonOperator::LE:
+      return _builder.CreateFCmpOLE(lhs, rhs);
+    case ComparisonOperator::LT:
+      return _builder.CreateFCmpOLT(lhs, rhs);
+    }
+
+    error("Unknown comparison expression operator", node.location);
     return nullptr;
   }
 
