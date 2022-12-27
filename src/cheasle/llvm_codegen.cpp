@@ -278,7 +278,7 @@ public:
     thenBlock = _builder.GetInsertBlock();
 
     // Emit else block.
-    function->getBasicBlockList().insert(function->end(), elseBlock);
+    function->getBasicBlockList().push_back(elseBlock);
     _builder.SetInsertPoint(elseBlock);
     auto elseValue = node.elseBranch.visit(*this);
     if (elseValue == nullptr) {
@@ -296,7 +296,7 @@ public:
     }
 
     // Emit merge block.
-    function->getBasicBlockList().insert(function->end(), mergeBlock);
+    function->getBasicBlockList().push_back(mergeBlock);
     _builder.SetInsertPoint(mergeBlock);
     auto phiNode = _builder.CreatePHI(thenValue->getType(), 2, "if");
     phiNode->addIncoming(thenValue, thenBlock);
@@ -322,17 +322,18 @@ public:
     _builder.CreateCondBr(condition, whileBlock, endBlock);
 
     // Emit while block.
-    function->getBasicBlockList().insert(function->end(), whileBlock);
+    function->getBasicBlockList().push_back(whileBlock);
     _builder.SetInsertPoint(whileBlock);
     auto body = node.body.visit(*this);
     if (body == nullptr) {
       return nullptr;
     }
+    condition = node.condition.visit(*this);
     _builder.CreateCondBr(condition, whileBlock, endBlock);
     whileBlock = _builder.GetInsertBlock();
 
     // Emit end block
-    function->getBasicBlockList().insert(function->end(), endBlock);
+    function->getBasicBlockList().push_back(endBlock);
     _builder.SetInsertPoint(endBlock);
     auto phiNode = _builder.CreatePHI(body->getType(), 2);
     phiNode->addIncoming(body, whileBlock);
@@ -377,7 +378,10 @@ public:
 
     CodeGenerator funcCodeGen(*this, node.name);
     for (auto &arg : function->args()) {
-      funcCodeGen._namedValues.define(std::string(arg.getName()), &arg);
+      auto alloca = createEntryBlockAlloca(function, std::string(arg.getName()),
+                                           arg.getType());
+      _builder.CreateStore(&arg, alloca);
+      funcCodeGen._namedValues.define(std::string(arg.getName()), alloca);
     }
     if (llvm::Value *returnValue = node.code.visit(funcCodeGen)) {
       _builder.CreateRet(returnValue);
@@ -398,13 +402,40 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const VariableDefinition &node) {
-    error("VariableDefinition not implemented", node.location);
-    return nullptr;
+    if (_namedValues.isLocallyDefined(node.name)) {
+      error("Variable " + node.name +
+                " is already defined in the current scope.",
+            node.location);
+      return nullptr;
+    }
+
+    auto value = node.expr.visit(*this);
+    if (value == nullptr) {
+      return nullptr;
+    }
+
+    auto function = _builder.GetInsertBlock()->getParent();
+    auto alloca = createEntryBlockAlloca(function, node.name, value->getType());
+    _builder.CreateStore(value, alloca);
+
+    _namedValues.define(node.name, alloca);
+    return value;
   }
 
   llvm::Value *operator()(const AST &, const AssignmentExpression &node) {
-    error("AssignmentExpression not implemented", node.location);
-    return nullptr;
+    auto value = node.expr.visit(*this);
+    if (value == nullptr) {
+      return nullptr;
+    }
+
+    auto variable = _namedValues.get(node.name);
+    if (!variable) {
+      error("Variable <" + node.name + "> is unknown", node.location);
+      return nullptr;
+    }
+
+    _builder.CreateStore(value, *variable);
+    return value;
   }
 
   llvm::Value *operator()(const AST &, const NameReference &node) {
@@ -413,7 +444,8 @@ public:
       error("Variable <" + node.name + "> is unknown", node.location);
       return nullptr;
     }
-    return *optValue;
+    return _builder.CreateLoad((*optValue)->getAllocatedType(), *optValue,
+                               node.name);
   }
 
 private:
@@ -536,6 +568,14 @@ private:
     return value != nullptr && value->getType()->isIntegerTy(1);
   }
 
+  static llvm::AllocaInst *createEntryBlockAlloca(llvm::Function *function,
+                                                  const std::string &varName,
+                                                  llvm::Type *varType) {
+    llvm::IRBuilder<> builder(&function->getEntryBlock(),
+                              function->getEntryBlock().begin());
+    return builder.CreateAlloca(varType, 0, varName.c_str());
+  }
+
   void error(const std::string &message, location location) {
     _errors.append("[llvm-codegen]", message, location);
   }
@@ -551,7 +591,7 @@ private:
   llvm::Module &_module;
   llvm::LLVMContext &_context;
   llvm::IRBuilder<> &_builder;
-  SymbolTable<llvm::Value *> _namedValues;
+  SymbolTable<llvm::AllocaInst *> _namedValues;
   SymbolTable<llvm::Function *> _functions;
 };
 

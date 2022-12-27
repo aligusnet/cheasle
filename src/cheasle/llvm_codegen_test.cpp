@@ -1,5 +1,6 @@
 #include "Catch2/catch_amalgamated.hpp"
 #include "cheasle/error.h"
+#include "cheasle/value.h"
 #include <cheasle/ast_test_util.h>
 #include <cheasle/llvm_codegen.h>
 
@@ -256,6 +257,38 @@ TEST_CASE("Logical expressions", "[llvm jit]") {
   }
 }
 
+TEST_CASE("let and reference", "[llvm jit]") {
+  auto letAst = TAST::let("a", TAST::constant(10.0));
+  auto refAst = TAST::ref("a");
+  auto ast = TAST::b({letAst, refAst});
+
+  auto result = compileAndRun<double>(ast);
+
+  REQUIRE_THAT(result, WithinRel(10.0, 1e-10));
+}
+
+TEST_CASE("let, assign and reference", "[llvm jit]") {
+  auto letAst = TAST::let("a", TAST::constant(10.0));
+  auto assignAst = TAST::assig("a", TAST::constant(20.0));
+  auto refAst = TAST::ref("a");
+  auto ast =
+      TAST::b({std::move(letAst), std::move(assignAst), std::move(refAst)});
+
+  auto result = compileAndRun<double>(ast);
+
+  REQUIRE_THAT(result, WithinRel(20.0, 1e-10));
+}
+
+TEST_CASE("const and reference", "[llvm jit]") {
+  auto letAst = TAST::constexp("a", TAST::constant(10.0));
+  auto refAst = TAST::ref("a");
+  auto ast = TAST::b({letAst, refAst});
+
+  auto result = compileAndRun<double>(ast);
+
+  REQUIRE_THAT(result, WithinRel(10.0, 1e-10));
+}
+
 TEST_CASE("if expression", "[llvm jit]") {
   SECTION("if true") {
     auto ast = TAST::ifexp(TAST::constant(true), TAST::constant(10.0),
@@ -273,11 +306,11 @@ TEST_CASE("if expression", "[llvm jit]") {
 }
 
 TEST_CASE("while expression", "[llvm jit]") {
-  SECTION("no loops double") {
+  SECTION("no loops: double") {
     /*
-    while false do:
+    while false {
       11.0;
-    end
+    }
     */
     auto ast = TAST::whileexp(TAST::constant(false), TAST::constant(11.0));
     auto result = compileAndRun<double>(std::move(ast));
@@ -285,15 +318,48 @@ TEST_CASE("while expression", "[llvm jit]") {
     REQUIRE_THAT(result, WithinRel(0.0, 1e-10)); // default value for double
   }
 
-  SECTION("no loops bool") {
+  SECTION("no loops: bool") {
     /*
-    while false do:
+    while false {
       true;
-    end
+    }
     */
     auto ast = TAST::whileexp(TAST::constant(false), TAST::constant(true));
     auto result = compileAndRun<bool>(std::move(ast));
     REQUIRE(result == false); // efault value for bool
+  }
+
+  SECTION("some loops: double") {
+    /*
+    let a: double = 0.0;
+    while a < 10.0 {
+      a = a + 1;
+    }
+    */
+    auto let = TAST::let("a", TAST::constant(0.0));
+    auto body = TAST::b(
+        {TAST::assig("a", TAST::add(TAST::ref("a"), TAST::constant(1.0)))});
+    auto loop = TAST::whileexp(TAST::lt(TAST::ref("a"), TAST::constant(10.0)),
+                               std::move(body));
+    auto ast = TAST::b({let, loop});
+    auto result = compileAndRun<double>(ast);
+
+    REQUIRE_THAT(result, WithinRel(10.0, 1e-10));
+  }
+
+  SECTION("some loops: bool") {
+    /*
+    let a: bool = false;
+    while not a {
+      a = true;
+    }
+    */
+    auto let = TAST::let("a", ValueType::Boolean, TAST::constant(false));
+    auto body = TAST::b({TAST::assig("a", TAST::constant(true))});
+    auto loop = TAST::whileexp(TAST::notexp(TAST::ref("a")), std::move(body));
+    auto ast = TAST::b({let, loop});
+    auto result = compileAndRun<bool>(ast);
+    REQUIRE(result == true);
   }
 }
 } // namespace cheasle
