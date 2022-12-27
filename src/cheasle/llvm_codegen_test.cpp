@@ -145,4 +145,24 @@ TEST_CASE("builtin function", "[llvm jit]") {
     REQUIRE(result == true);
   }
 }
+
+TEST_CASE("Unary expression", "[llvm jit]") {
+  SECTION("abs") {
+    auto ast = TAST::abs(TAST::constant(-10.1));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(10.1, 1e-8));
+  }
+
+  SECTION("minus of negative") {
+    auto ast = TAST::minus(TAST::constant(-10.1));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(10.1, 1e-8));
+  }
+
+  SECTION("minus of positive") {
+    auto ast = TAST::minus(TAST::constant(10.1));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(-10.1, 1e-8));
+  }
+}
 } // namespace cheasle

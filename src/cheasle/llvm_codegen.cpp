@@ -72,6 +72,7 @@ public:
     setBuiltinMathFunction("sqrt");
     setBuiltinMathFunction("log");
     setBuiltinMathFunction("exp");
+    setBuiltinMathFunction("fabs");
     setBuiltinPrintFunction("printd", ValueType::Double);
     setBuiltinPrintFunction("printb", ValueType::Boolean);
   }
@@ -95,7 +96,20 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const UnaryExpression &node) {
-    error("UnaryExpression not implemented", node.location);
+
+    switch (node.op) {
+    case UnaryOperator::Abs:
+      return callFunction("fabs", std::vector<AST>{node.child}, node.location);
+    case UnaryOperator::Minus: {
+      auto val = node.child.visit(*this);
+      if (val == nullptr) {
+        return nullptr;
+      }
+      auto minusOne = llvm::ConstantFP::get(_context, llvm::APFloat(-1.0));
+      return _builder.CreateFMul(minusOne, val, "minus");
+    }
+    }
+    error("Unknown unary operator", node.location);
     return nullptr;
   }
 
