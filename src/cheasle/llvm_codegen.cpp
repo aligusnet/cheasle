@@ -96,7 +96,6 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const UnaryExpression &node) {
-
     switch (node.op) {
     case UnaryOperator::Abs:
       return callFunction("fabs", std::vector<AST>{node.child}, node.location);
@@ -306,8 +305,40 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const WhileExpression &node) {
-    error("WhileExpression not implemented", node.location);
-    return nullptr;
+    auto function = _builder.GetInsertBlock()->getParent();
+    auto headerBlock = _builder.GetInsertBlock();
+
+    auto whileBlock = llvm::BasicBlock::Create(_context, "while");
+    auto endBlock = llvm::BasicBlock::Create(_context, "end");
+
+    auto condition = node.condition.visit(*this);
+    if (condition == nullptr) {
+      return nullptr;
+    }
+    if (!isBoolean(condition)) {
+      error("Condition expresssion in while should be bool", node.location);
+      return nullptr;
+    }
+    _builder.CreateCondBr(condition, whileBlock, endBlock);
+
+    // Emit while block.
+    function->getBasicBlockList().insert(function->end(), whileBlock);
+    _builder.SetInsertPoint(whileBlock);
+    auto body = node.body.visit(*this);
+    if (body == nullptr) {
+      return nullptr;
+    }
+    _builder.CreateCondBr(condition, whileBlock, endBlock);
+    whileBlock = _builder.GetInsertBlock();
+
+    // Emit end block
+    function->getBasicBlockList().insert(function->end(), endBlock);
+    _builder.SetInsertPoint(endBlock);
+    auto phiNode = _builder.CreatePHI(body->getType(), 2);
+    phiNode->addIncoming(body, whileBlock);
+    phiNode->addIncoming(llvm::Constant::getNullValue(body->getType()),
+                         headerBlock);
+    return phiNode;
   }
 
   llvm::Value *operator()(const AST &, const BuiltInFunction &node) {
@@ -356,6 +387,7 @@ public:
         error("Function <" + node.name +
                   "> failed validation: " + validationMessage,
               node.location);
+        std::cerr << getInstructions(function) << std::endl;
         return nullptr;
       }
     } else {

@@ -271,4 +271,29 @@ TEST_CASE("if expression", "[llvm jit]") {
     REQUIRE(result == false);
   }
 }
+
+TEST_CASE("while expression", "[llvm jit]") {
+  SECTION("no loops double") {
+    /*
+    while false do:
+      11.0;
+    end
+    */
+    auto ast = TAST::whileexp(TAST::constant(false), TAST::constant(11.0));
+    auto result = compileAndRun<double>(std::move(ast));
+
+    REQUIRE_THAT(result, WithinRel(0.0, 1e-10)); // default value for double
+  }
+
+  SECTION("no loops bool") {
+    /*
+    while false do:
+      true;
+    end
+    */
+    auto ast = TAST::whileexp(TAST::constant(false), TAST::constant(true));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false); // efault value for bool
+  }
+}
 } // namespace cheasle
