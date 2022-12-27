@@ -255,4 +255,20 @@ TEST_CASE("Logical expressions", "[llvm jit]") {
     REQUIRE(result == false);
   }
 }
+
+TEST_CASE("if expression", "[llvm jit]") {
+  SECTION("if true") {
+    auto ast = TAST::ifexp(TAST::constant(true), TAST::constant(10.0),
+                           TAST::constant(11.0));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(10.0, 1e-8));
+  }
+
+  SECTION("if false") {
+    auto ast = TAST::ifexp(TAST::constant(false), TAST::constant(true),
+                           TAST::constant(false));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+}
 } // namespace cheasle

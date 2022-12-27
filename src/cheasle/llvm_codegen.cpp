@@ -122,7 +122,7 @@ public:
 
     auto lhsType = lhs->getType();
     auto rhsType = rhs->getType();
-    if (lhsType->getTypeID() != rhsType->getTypeID()) {
+    if (lhsType != rhsType) {
       error("Both operands of equality expression are exptected to be the same "
             "type.",
             node.location);
@@ -159,8 +159,7 @@ public:
 
     auto lhsType = lhs->getType();
     auto rhsType = rhs->getType();
-    if (lhsType->getTypeID() != rhsType->getTypeID() ||
-        !lhsType->isFloatingPointTy()) {
+    if (lhsType != rhsType || !lhsType->isFloatingPointTy()) {
       error(
           "Both operands of comparison expression are exptected to be the same "
           "type of double.",
@@ -190,9 +189,7 @@ public:
       return nullptr;
     }
 
-    auto lhsType = lhs->getType();
-    auto rhsType = rhs->getType();
-    if (!lhsType->isIntegerTy(1) || !rhsType->isIntegerTy(1)) {
+    if (!isBoolean(lhs) || !isBoolean(rhs)) {
       error(
           "Both operands of comparison expression are exptected to be the same "
           "type of bool.",
@@ -217,7 +214,7 @@ public:
       return nullptr;
     }
 
-    if (!child->getType()->isIntegerTy(1)) {
+    if (!isBoolean(child)) {
       error("Not operator expects a boolean expression", node.location);
     }
 
@@ -251,8 +248,61 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const IfExpression &node) {
-    error("IfExpression not implemented", node.location);
-    return nullptr;
+    auto condition = node.condition.visit(*this);
+    if (condition == nullptr) {
+      return nullptr;
+    }
+
+    if (!isBoolean(condition)) {
+      error("Condition expresssion in if should be bool", node.location);
+      return nullptr;
+    }
+
+    auto function = _builder.GetInsertBlock()->getParent();
+    // Else block is inserted into the enf of the function.
+    auto thenBlock = llvm::BasicBlock::Create(_context, "then", function);
+    // Else and merge blocks are not yet inserted.
+    auto elseBlock = llvm::BasicBlock::Create(_context, "else");
+    auto mergeBlock = llvm::BasicBlock::Create(_context, "merge");
+
+    _builder.CreateCondBr(condition, thenBlock, elseBlock);
+
+    // Emit then block;
+    _builder.SetInsertPoint(thenBlock);
+    auto thenValue = node.thenBranch.visit(*this);
+    if (thenValue == nullptr) {
+      return nullptr;
+    }
+
+    _builder.CreateBr(mergeBlock);
+    // Update then block pointer in case if codegen chaged the current block.
+    thenBlock = _builder.GetInsertBlock();
+
+    // Emit else block.
+    function->getBasicBlockList().insert(function->end(), elseBlock);
+    _builder.SetInsertPoint(elseBlock);
+    auto elseValue = node.elseBranch.visit(*this);
+    if (elseValue == nullptr) {
+      return nullptr;
+    }
+
+    _builder.CreateBr(mergeBlock);
+    // Update else block pointer in case if codegen chaged the current block.
+    elseBlock = _builder.GetInsertBlock();
+
+    if (thenValue->getType() != elseValue->getType()) {
+      error("Else and then branches of if expression must be the same type.",
+            node.location);
+      return nullptr;
+    }
+
+    // Emit merge block.
+    function->getBasicBlockList().insert(function->end(), mergeBlock);
+    _builder.SetInsertPoint(mergeBlock);
+    auto phiNode = _builder.CreatePHI(thenValue->getType(), 2, "if");
+    phiNode->addIncoming(thenValue, thenBlock);
+    phiNode->addIncoming(elseValue, elseBlock);
+    return phiNode;
   }
 
   llvm::Value *operator()(const AST &, const WhileExpression &node) {
@@ -448,6 +498,10 @@ private:
       }
     }
     return _builder.CreateCall(function, std::move(argValues), "call");
+  }
+
+  bool isBoolean(const llvm::Value *value) const {
+    return value != nullptr && value->getType()->isIntegerTy(1);
   }
 
   void error(const std::string &message, location location) {
