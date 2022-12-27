@@ -217,4 +217,42 @@ TEST_CASE("Comparison expressions", "[llvm jit]") {
     REQUIRE(result == false);
   }
 }
+
+TEST_CASE("Logical expressions", "[llvm jit]") {
+  SECTION("true and true") {
+    auto ast = TAST::andexp(TAST::constant(true), TAST::constant(true));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+
+  SECTION("true and false") {
+    auto ast = TAST::andexp(TAST::constant(true), TAST::constant(false));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+
+  SECTION("false or true") {
+    auto ast = TAST::orexp(TAST::constant(false), TAST::constant(true));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+
+  SECTION("false or false") {
+    auto ast = TAST::orexp(TAST::constant(false), TAST::constant(false));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+
+  SECTION("not false") {
+    auto ast = TAST::notexp(TAST::constant(false));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+
+  SECTION("not true") {
+    auto ast = TAST::notexp(TAST::constant(true));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+}
 } // namespace cheasle

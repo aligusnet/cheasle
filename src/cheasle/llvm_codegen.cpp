@@ -184,13 +184,44 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const BinaryLogicalExpression &node) {
-    error("BinaryLogicalExpression not implemented", node.location);
+    auto lhs = node.lhs.visit(*this);
+    auto rhs = node.rhs.visit(*this);
+    if (lhs == nullptr || rhs == nullptr) {
+      return nullptr;
+    }
+
+    auto lhsType = lhs->getType();
+    auto rhsType = rhs->getType();
+    if (!lhsType->isIntegerTy(1) || !rhsType->isIntegerTy(1)) {
+      error(
+          "Both operands of comparison expression are exptected to be the same "
+          "type of bool.",
+          node.location);
+      return nullptr;
+    }
+
+    switch (node.op) {
+    case BinaryLogicalOperator::And:
+      return _builder.CreateLogicalAnd(lhs, rhs);
+    case BinaryLogicalOperator::Or:
+      return _builder.CreateLogicalOr(lhs, rhs);
+    }
+
+    error("Unknown binary logical operator", node.location);
     return nullptr;
   }
 
   llvm::Value *operator()(const AST &, const NotExpression &node) {
-    error("NotExpression not implemented", node.location);
-    return nullptr;
+    auto child = node.child.visit(*this);
+    if (child == nullptr) {
+      return nullptr;
+    }
+
+    if (!child->getType()->isIntegerTy(1)) {
+      error("Not operator expects a boolean expression", node.location);
+    }
+
+    return _builder.CreateNot(child);
   }
 
   llvm::Value *operator()(const AST &, const ConstantValue &node) {
