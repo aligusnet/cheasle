@@ -214,12 +214,11 @@ TEST_CASE("bultin function call", "[parser]") {
   }
 
   SECTION("print") {
-    std::string code = "print(a, 10, b);";
+    std::string code = "printd(a, 10, b);";
     auto ast = parse(code);
 
     auto expected =
-        TAST::builtin(BuiltInFunctionId::Print,
-                      {TAST::ref("a"), TAST::constant(10.0), TAST::ref("b")});
+        TAST::printd({TAST::ref("a"), TAST::constant(10.0), TAST::ref("b")});
     REQUIRE_AST(expected, ast);
   }
 }

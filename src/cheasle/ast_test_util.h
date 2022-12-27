@@ -219,9 +219,14 @@ public:
                                       std::vector<AST>{std::move(arg)}, loc);
   }
 
-  static inline AST print(std::vector<AST> args) {
-    return AST::make<BuiltInFunction>(BuiltInFunctionId::Print, std::move(args),
-                                      loc);
+  static inline AST printd(std::vector<AST> args) {
+    return AST::make<BuiltInFunction>(BuiltInFunctionId::Printd,
+                                      std::move(args), loc);
+  }
+
+  static inline AST printb(std::vector<AST> args) {
+    return AST::make<BuiltInFunction>(BuiltInFunctionId::Printb,
+                                      std::move(args), loc);
   }
 
 private:

@@ -142,7 +142,7 @@ struct WhileExpression {
   location location;
 };
 
-enum class BuiltInFunctionId { Sqrt, Exp, Log, Print };
+enum class BuiltInFunctionId { Sqrt, Exp, Log, Printd, Printb };
 
 struct BuiltInFunction {
   BuiltInFunction(BuiltInFunctionId id, std::vector<AST> arguments,

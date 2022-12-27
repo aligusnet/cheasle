@@ -8,6 +8,7 @@
 #include "cheasle/value.h"
 #include "location.h"
 
+#include <ios>
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Function.h>
@@ -24,7 +25,7 @@
 #include <sstream>
 #include <stdarg.h>
 
-extern "C" double cheaslePrint(int count, ...) {
+extern "C" double printd(int count, ...) {
   double val;
   va_list args;
   va_start(args, count);
@@ -42,6 +43,24 @@ extern "C" double cheaslePrint(int count, ...) {
   return val;
 }
 
+extern "C" bool printb(int count, ...) {
+  int val;
+  va_list args;
+  va_start(args, count);
+  for (int i = 0; i < count; ++i) {
+    val = va_arg(args, int);
+    if (i != 0) {
+      std::cout << ' ';
+    }
+    std::cout << std::boolalpha << (val > 0);
+  }
+  va_end(args);
+
+  std::cout << std::endl;
+
+  return val > 0;
+}
+
 namespace cheasle {
 class CodeGenerator {
 public:
@@ -53,7 +72,8 @@ public:
     setBuiltinMathFunction("sqrt");
     setBuiltinMathFunction("log");
     setBuiltinMathFunction("exp");
-    setBuiltinPrintFunction();
+    setBuiltinPrintFunction("printd", ValueType::Double);
+    setBuiltinPrintFunction("printb", ValueType::Boolean);
   }
 
   llvm::Value *operator()(const AST &, const BinaryExpression &node) {
@@ -139,16 +159,14 @@ public:
     switch (node.id) {
     case BuiltInFunctionId::Sqrt:
       return callFunction("sqrt", node.arguments, node.location);
-      break;
     case BuiltInFunctionId::Exp:
       return callFunction("exp", node.arguments, node.location);
-      break;
     case BuiltInFunctionId::Log:
       return callFunction("log", node.arguments, node.location);
-      break;
-    case BuiltInFunctionId::Print:
-      return callPrint(node.arguments, node.location);
-      break;
+    case BuiltInFunctionId::Printd:
+      return callPrint("printd", node.arguments, node.location);
+    case BuiltInFunctionId::Printb:
+      return callPrint("printb", node.arguments, node.location);
     }
 
     error("BuiltInFunction is not implemented", node.location);
@@ -261,16 +279,14 @@ private:
     }
   }
 
-  void setBuiltinPrintFunction() {
-    std::string name = "print";
+  void setBuiltinPrintFunction(const std::string &name, ValueType valueType) {
     auto optFunc = _functions.get(name);
     if (!optFunc) {
       std::vector<llvm::Type *> argTypes{llvm::Type::getInt32Ty(_context)};
-      auto *functionType = llvm::FunctionType::get(
-          getLlvmType(ValueType::Double), argTypes, /*isVarArg*/ true);
-      auto *function =
-          llvm::Function::Create(functionType, llvm::Function::ExternalLinkage,
-                                 "cheaslePrint", _module);
+      auto *functionType = llvm::FunctionType::get(getLlvmType(valueType),
+                                                   argTypes, /*isVarArg*/ true);
+      auto *function = llvm::Function::Create(
+          functionType, llvm::Function::ExternalLinkage, name, _module);
       _functions.define(name, function);
       for (auto &arg : function->args()) {
         arg.setName("count");
@@ -278,8 +294,8 @@ private:
     }
   }
 
-  llvm::Value *callPrint(const std::vector<AST> &arguments, location location) {
-    std::string name = "print";
+  llvm::Value *callPrint(const std::string &name,
+                         const std::vector<AST> &arguments, location location) {
     auto optFunction = _functions.get(name);
     if (!optFunction || *optFunction == nullptr) {
       error("Function <" + name + "> is unknown", location);

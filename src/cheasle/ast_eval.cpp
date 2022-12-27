@@ -230,7 +230,9 @@ public:
       return callExp(node.arguments, node.location);
     case BuiltInFunctionId::Log:
       return callLog(node.arguments, node.location);
-    case BuiltInFunctionId::Print:
+    case BuiltInFunctionId::Printd:
+      return callPrint(node.arguments, node.location);
+    case BuiltInFunctionId::Printb:
       return callPrint(node.arguments, node.location);
     case BuiltInFunctionId::Sqrt:
       return callSqrt(node.arguments, node.location);

@@ -275,17 +275,40 @@ TEST_CASE("while..do expression", "[type-checker]") {
 }
 
 TEST_CASE("buuiltin functions", "[type-checker]") {
-  SECTION("print(double, bool)") {
-    auto ast = TAST::builtin(BuiltInFunctionId::Print,
-                             {TAST::constant(10.0), TAST::constant(true)});
+  SECTION("printd(double, double)") {
+    auto ast = TAST::printd({TAST::constant(10.0), TAST::constant(12.0)});
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Double);
+  }
+
+  SECTION("printd(double, bool)") {
+    auto ast = TAST::printd({TAST::constant(10.0), TAST::constant(true)});
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Double);
+  }
+
+  SECTION("printd()") {
+    auto ast = TAST::printd({});
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Double);
+  }
+
+  SECTION("printb(bool, bool)") {
+    auto ast = TAST::printb({TAST::constant(true), TAST::constant(false)});
     auto type = checkTypes(ast);
     REQUIRE(type == ValueType::Boolean);
   }
 
-  SECTION("print()") {
-    auto ast = TAST::builtin(BuiltInFunctionId::Print, {});
+  SECTION("printd(double, bool)") {
+    auto ast = TAST::printb({TAST::constant(10.0), TAST::constant(true)});
     auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Double);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("printb()") {
+    auto ast = TAST::printb({});
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Boolean);
   }
 
   SECTION("sqrt(double)") {

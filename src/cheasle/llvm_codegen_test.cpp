@@ -131,11 +131,18 @@ TEST_CASE("builtin function", "[llvm jit]") {
     REQUIRE_THAT(result, WithinRel(log(10.0), 1e-8));
   }
 
-  SECTION("print") {
-    auto ast = TAST::print(
+  SECTION("printd") {
+    auto ast = TAST::printd(
         {TAST::constant(10.0), TAST::constant(20.0), TAST::constant(30.0)});
     auto result = compileAndRun<double>(std::move(ast));
     REQUIRE_THAT(result, WithinRel(30.0, 1e-8));
+  }
+
+  SECTION("printb") {
+    auto ast = TAST::printb(
+        {TAST::constant(false), TAST::constant(false), TAST::constant(true)});
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
   }
 }
 } // namespace cheasle

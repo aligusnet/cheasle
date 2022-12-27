@@ -1,5 +1,6 @@
 #include "type_checker.h"
 #include "cheasle/ast.h"
+#include "cheasle/value.h"
 #include <cheasle/symbol.h>
 #include <cheasle/symbol_table.h>
 #include <sstream>
@@ -161,13 +162,32 @@ public:
               node.location);
       }
       return ValueType::Double;
-    case BuiltInFunctionId::Print:
+    case BuiltInFunctionId::Printd:
       if (node.arguments.size() == 0) {
-        error("Bultin function <print> expects at least 1 argument",
+        error("Bultin function <printd> expects at least 1 argument",
               node.location);
         return ValueType::Double;
       }
-      return node.arguments.back().visit(*this);
+      for (const auto &arg : node.arguments) {
+        if (arg.visit(*this) != ValueType::Double) {
+          error("Bultin function <printd> expects arguments of type double",
+                node.location);
+        }
+      }
+      return ValueType::Double;
+    case BuiltInFunctionId::Printb:
+      if (node.arguments.size() == 0) {
+        error("Bultin function <printb> expects at least 1 argument",
+              node.location);
+        return ValueType::Boolean;
+      }
+      for (const auto &arg : node.arguments) {
+        if (arg.visit(*this) != ValueType::Boolean) {
+          error("Bultin function <printd> expects arguments of type bool",
+                node.location);
+        }
+      }
+      return ValueType::Boolean;
     }
 
     error("Unknown bultin function", node.location);
