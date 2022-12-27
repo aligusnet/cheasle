@@ -1,7 +1,9 @@
 #include "cheasle/error.h"
 #include <Catch2/catch_amalgamated.hpp>
 #include <cheasle/ast_eval.h>
+#include <cheasle/ast_test_util.h>
 #include <cheasle/driver.h>
+#include <cheasle/llvm_codegen.h>
 #include <cheasle/type_checker.h>
 #include <lexer.h>
 #include <parser.h>
@@ -9,8 +11,8 @@
 using Catch::Matchers::WithinRel;
 namespace cheasle {
 
-Value execute(const std::string &code, const std::string &testName,
-              bool trace = false) {
+AST generateAST(const std::string &code, const std::string &testName,
+                bool trace) {
   if (trace) {
     std::cout << "********************************" << std::endl;
     std::cout << "Building and executing program: " << std::endl;
@@ -33,14 +35,16 @@ Value execute(const std::string &code, const std::string &testName,
   REQUIRE(parseResult == 0);
   REQUIRE(!driver.getErrors().hasErrors());
 
-  const auto &ast = driver.getAST();
-
   if (trace) {
     std::cout << "--------------------------------" << std::endl;
     std::cout << "AST:" << std::endl;
-    std::cout << ast << std::endl;
+    std::cout << driver.getAST() << std::endl;
   }
 
+  return driver.getAST();
+}
+
+template <typename T> T interpret(const AST &ast, bool trace = false) {
   cheasle::ErrorList typeCheckerErrors{};
   auto type = cheasle::checkTypes(ast, typeCheckerErrors);
 
@@ -69,7 +73,44 @@ Value execute(const std::string &code, const std::string &testName,
     std::cout << "Execution result: " << *result << std::endl << std::endl;
   }
 
-  return *result;
+  requireType<T>(result);
+  return std::get<T>(*result);
+}
+
+template <typename T> T compileAndRun(AST ast, bool trace) {
+  ErrorList errors{};
+  auto result = compileAndRun(ast, errors);
+  if (errors.hasErrors()) {
+    std::cout << errors;
+  }
+
+  REQUIRE_FALSE(errors.hasErrors());
+  REQUIRE(result);
+
+  requireType<T>(result);
+  return std::get<T>(*result);
+}
+
+template <typename T> void validateResult(T expected, T actual) {
+  REQUIRE(expected == actual);
+}
+
+template <> void validateResult<double>(double expected, double actual) {
+  REQUIRE_THAT(expected, WithinRel(actual, 1e-4));
+}
+
+template <typename T>
+void runIntegrationTest(const std::string &code, const std::string &testName,
+                        bool trace, T expected) {
+  auto ast = generateAST(code, testName, trace);
+  {
+    auto result = interpret<T>(ast, trace);
+    validateResult(expected, result);
+  }
+  {
+    auto result = compileAndRun<T>(std::move(ast), trace);
+    validateResult(expected, result);
+  }
 }
 
 TEST_CASE("Fibonacci sequnce", "[integration]") {
@@ -85,8 +126,7 @@ TEST_CASE("Fibonacci sequnce", "[integration]") {
                      "  }\n"
                      "}\n"
                      "fibonacci(21);\n";
-  auto result = execute(code, "fibonacci", false);
-  REQUIRE_THAT(std::get<double>(result), WithinRel(10946.0, 1e-8));
+  runIntegrationTest(code, "fibonacci", false, 10946.0);
 }
 
 TEST_CASE("Sqrt", "[integration]") {
@@ -103,8 +143,7 @@ TEST_CASE("Sqrt", "[integration]") {
       "}\n"
       "const arg: double = 171;\n"
       "mySqrt(arg);\n";
-  auto result = execute(code, "sqrt", false);
-  REQUIRE_THAT(std::get<double>(result), WithinRel(sqrt(171.0), 1e-4));
+  runIntegrationTest(code, "sqrt", false, sqrt(171.0));
 }
 
 TEST_CASE("Within", "[integration]") {
@@ -116,9 +155,7 @@ TEST_CASE("Within", "[integration]") {
       "  not (value < begin or value >= end);\n"
       "}\n"
       "within(5.0, 10.0, 7.0) and within2(5.0, 10.0, 7.0);\n";
-
-  auto result = execute(code, "within", false);
-  REQUIRE(std::get<bool>(result) == true);
+  runIntegrationTest(code, "within", false, true);
 }
 
 }; // namespace cheasle
