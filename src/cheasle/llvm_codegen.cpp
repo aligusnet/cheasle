@@ -463,6 +463,12 @@ private:
       return llvm::Type::getInt1Ty(_context);
     case ValueType::Double:
       return llvm::Type::getDoubleTy(_context);
+    case ValueType::Any:
+      error("Unsupported type Any", location());
+      return nullptr;
+    case ValueType::Function:
+      error("Unsupported type Function", location());
+      return nullptr;
     }
   }
 
@@ -624,6 +630,10 @@ Value callEntryPoint(llvm::JITTargetAddress address, ValueType returnType) {
     return callEntryPoint<bool>(address);
   case ValueType::Double:
     return callEntryPoint<double>(address);
+  case ValueType::Any:
+    break;
+  case ValueType::Function:
+    break;
   }
   return Value();
 }

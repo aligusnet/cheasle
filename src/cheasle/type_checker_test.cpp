@@ -6,7 +6,7 @@
 
 namespace cheasle {
 
-ValueType checkTypes(const AST &ast) {
+ValueType checkTypes(AST &ast) {
   ErrorList errors{};
   auto type = checkTypes(ast, errors);
   if (errors.hasErrors()) {
@@ -16,7 +16,7 @@ ValueType checkTypes(const AST &ast) {
   return type;
 }
 
-ValueType checkTypesWithErrors(const AST &ast) {
+ValueType checkTypesWithErrors(AST &ast) {
   ErrorList errors{};
   auto type = checkTypes(ast, errors);
   REQUIRE(errors.hasErrors());
@@ -387,7 +387,7 @@ TEST_CASE("user function definition", "[type-checker]") {
                           FunctionArgument{"b", ValueType::Double}},
                          TAST::lt(TAST::ref("a"), TAST::ref("b")));
     auto type = checkTypes(ast);
-    REQUIRE(type == ValueType::Boolean);
+    REQUIRE(type == ValueType::Function);
   }
 
   SECTION("wrong return type") {
@@ -396,7 +396,7 @@ TEST_CASE("user function definition", "[type-checker]") {
                           FunctionArgument{"b", ValueType::Double}},
                          TAST::lt(TAST::ref("a"), TAST::ref("b")));
     auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Double);
+    REQUIRE(type == ValueType::Function);
   }
 
   SECTION("wrong argument type") {
@@ -405,7 +405,7 @@ TEST_CASE("user function definition", "[type-checker]") {
                           FunctionArgument{"b", ValueType::Double}},
                          TAST::lt(TAST::ref("a"), TAST::ref("b")));
     auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Boolean);
+    REQUIRE(type == ValueType::Function);
   }
 
   SECTION("missing argument") {
@@ -413,7 +413,7 @@ TEST_CASE("user function definition", "[type-checker]") {
                          {FunctionArgument{"a", ValueType::Double}},
                          TAST::lt(TAST::ref("a"), TAST::ref("b")));
     auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Boolean);
+    REQUIRE(type == ValueType::Function);
   }
 }
 
@@ -464,7 +464,7 @@ TEST_CASE("user function call", "[type-checker]") {
 TEST_CASE("Name reference", "[type-checker]") {
   auto ast = TAST::ref("b");
   auto type = checkTypesWithErrors(ast);
-  REQUIRE(type == ValueType::Double);
+  REQUIRE(type == ValueType::Any);
 }
 
 } // namespace cheasle

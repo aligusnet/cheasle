@@ -21,6 +21,11 @@ std::ostream &operator<<(std::ostream &os, const ValueType &type) {
   case ValueType::Double:
     os << "double";
     break;
+  case ValueType::Any:
+    os << "any";
+    break;
+  case ValueType::Function:
+    os << "function";
   }
   return os;
 }

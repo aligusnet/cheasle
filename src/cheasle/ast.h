@@ -36,12 +36,13 @@ enum class BinaryOperator { Add, Subtract, Multiply, Divide };
 
 struct BinaryExpression {
   BinaryExpression(AST lhs, AST rhs, BinaryOperator op, location location)
-      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
+      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op), type(ValueType::Any),
         location(std::move(location)) {}
 
   AST lhs;
   AST rhs;
   BinaryOperator op;
+  ValueType type;
   location location;
 };
 
@@ -49,10 +50,12 @@ enum class UnaryOperator { Minus, Abs };
 
 struct UnaryExpression {
   UnaryExpression(AST child, UnaryOperator op, location location)
-      : child(std::move(child)), op(op), location(std::move(location)) {}
+      : child(std::move(child)), op(op), type(ValueType::Any),
+        location(std::move(location)) {}
 
   AST child;
   UnaryOperator op;
+  ValueType type;
   location location;
 };
 
@@ -60,12 +63,13 @@ enum class EqualityOperator { EQ, NE };
 
 struct EqualityExpression {
   EqualityExpression(AST lhs, AST rhs, EqualityOperator op, location location)
-      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
+      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op), type(ValueType::Any),
         location(std::move(location)) {}
 
   AST lhs;
   AST rhs;
   EqualityOperator op;
+  ValueType type;
   location location;
 };
 
@@ -74,12 +78,13 @@ enum class ComparisonOperator { GT, GE, LT, LE };
 struct ComparisonExpression {
   ComparisonExpression(AST lhs, AST rhs, ComparisonOperator op,
                        location location)
-      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
+      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op), type(ValueType::Any),
         location(std::move(location)) {}
 
   AST lhs;
   AST rhs;
   ComparisonOperator op;
+  ValueType type;
   location location;
 };
 
@@ -88,28 +93,33 @@ enum class BinaryLogicalOperator { And, Or };
 struct BinaryLogicalExpression {
   BinaryLogicalExpression(AST lhs, AST rhs, BinaryLogicalOperator op,
                           location location)
-      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op),
+      : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op), type(ValueType::Any),
         location(std::move(location)) {}
 
   AST lhs;
   AST rhs;
   BinaryLogicalOperator op;
+  ValueType type;
   location location;
 };
 
 struct NotExpression {
   NotExpression(AST child, location location)
-      : child(std::move(child)), location(std::move(location)) {}
+      : child(std::move(child)), type(ValueType::Any),
+        location(std::move(location)) {}
 
   AST child;
+  ValueType type;
   location location;
 };
 
 struct ConstantValue {
   ConstantValue(Value value, location location)
-      : value(std::move(value)), location(std::move(location)) {}
+      : value(std::move(value)), type(ValueType::Any),
+        location(std::move(location)) {}
 
   Value value;
+  ValueType type;
   location location;
 };
 
@@ -118,27 +128,31 @@ struct Block {
       : children(std::move(children)), location(std::move(location)) {}
 
   std::vector<AST> children;
+  ValueType type;
   location location;
 };
 
 struct IfExpression {
   IfExpression(AST condition, AST thenBranch, AST elseBranch, location location)
       : condition(std::move(condition)), thenBranch(std::move(thenBranch)),
-        elseBranch(std::move(elseBranch)), location(std::move(location)) {}
+        elseBranch(std::move(elseBranch)), type(ValueType::Any),
+        location(std::move(location)) {}
 
   AST condition;
   AST thenBranch;
   AST elseBranch;
+  ValueType type;
   location location;
 };
 
 struct WhileExpression {
   WhileExpression(AST condition, AST body, location location)
       : condition(std::move(condition)), body(std::move(body)),
-        location(std::move(location)) {}
+        type(ValueType::Any), location(std::move(location)) {}
 
   AST condition;
   AST body;
+  ValueType type;
   location location;
 };
 
@@ -147,12 +161,13 @@ enum class BuiltInFunctionId { Sqrt, Exp, Log, Printd, Printb };
 struct BuiltInFunction {
   BuiltInFunction(BuiltInFunctionId id, std::vector<AST> arguments,
                   location location)
-      : arguments(std::move(arguments)), id(id), location(std::move(location)) {
-  }
+      : arguments(std::move(arguments)), id(id), type(ValueType::Any),
+        location(std::move(location)) {}
 
   std::vector<AST> arguments;
-  location location;
   BuiltInFunctionId id;
+  ValueType type;
+  location location;
 };
 
 struct FunctionArgument {
@@ -164,22 +179,25 @@ struct FunctionDefinition {
   FunctionDefinition(std::string name, ValueType returnType, AST code,
                      std::vector<FunctionArgument> arguments, location location)
       : code(std::move(code)), name(std::move(name)), returnType(returnType),
-        arguments(std::move(arguments)), location(std::move(location)) {}
+        arguments(std::move(arguments)), type(ValueType::Function),
+        location(std::move(location)) {}
 
   AST code;
   std::string name;
   ValueType returnType;
   std::vector<FunctionArgument> arguments;
+  ValueType type;
   location location;
 };
 
 struct FunctionCall {
   FunctionCall(std::string name, std::vector<AST> arguments, location location)
       : arguments(std::move(arguments)), name(std::move(name)),
-        location(std::move(location)) {}
+        type(ValueType::Any), location(std::move(location)) {}
 
   std::vector<AST> arguments;
   std::string name;
+  ValueType type;
   location location;
 };
 
@@ -198,19 +216,22 @@ struct VariableDefinition {
 
 struct AssignmentExpression {
   AssignmentExpression(std::string name, AST expr, location location)
-      : expr(std::move(expr)), name(std::move(name)),
+      : expr(std::move(expr)), name(std::move(name)), type(ValueType::Any),
         location(std::move(location)) {}
 
   AST expr;
   std::string name;
+  ValueType type;
   location location;
 };
 
 struct NameReference {
   NameReference(std::string name, location location)
-      : name(std::move(name)), location(std::move(location)) {}
+      : name(std::move(name)), type(ValueType::Any),
+        location(std::move(location)) {}
 
   std::string name;
+  ValueType type;
   location location;
 };
 

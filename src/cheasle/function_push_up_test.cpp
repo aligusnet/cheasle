@@ -11,7 +11,7 @@ namespace {
 
 const std::string MainName = "main";
 
-ValueType getMainType(const AST &ast) {
+ValueType getMainType(AST &ast) {
   ErrorList errors{};
   auto type = checkTypes(ast, errors);
   if (errors.hasErrors()) {

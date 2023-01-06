@@ -6,5 +6,5 @@
 #include <cheasle/error.h>
 
 namespace cheasle {
-ValueType checkTypes(const AST &ast, ErrorList &errors);
+ValueType checkTypes(AST &ast, ErrorList &errors);
 } // namespace cheasle

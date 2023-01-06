@@ -13,7 +13,7 @@ public:
               SymbolTable<FunctionSymbol> &functions, ErrorList &errorList)
       : _variables(variables), _functions(functions), _errors(errorList) {}
 
-  ValueType operator()(const AST &, const BinaryExpression &node) {
+  ValueType operator()(const AST &, BinaryExpression &node) {
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
@@ -23,10 +23,11 @@ public:
           node.location);
     }
 
-    return ValueType::Double;
+    node.type = ValueType::Double;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const UnaryExpression &node) {
+  ValueType operator()(const AST &, UnaryExpression &node) {
     auto child = node.child.visit(*this);
 
     if (child != ValueType::Double) {
@@ -34,10 +35,11 @@ public:
             node.location);
     }
 
-    return ValueType::Double;
+    node.type = ValueType::Double;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const EqualityExpression &node) {
+  ValueType operator()(const AST &, EqualityExpression &node) {
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
@@ -47,10 +49,11 @@ public:
             node.location);
     }
 
-    return ValueType::Boolean;
+    node.type = ValueType::Boolean;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const ComparisonExpression &node) {
+  ValueType operator()(const AST &, ComparisonExpression &node) {
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
@@ -60,20 +63,22 @@ public:
             node.location);
     }
 
-    return ValueType::Boolean;
+    node.type = ValueType::Boolean;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const NotExpression &node) {
+  ValueType operator()(const AST &, NotExpression &node) {
     auto child = node.child.visit(*this);
 
     if (child != ValueType::Boolean) {
       error("Not expression expects an operand of double type", node.location);
     }
 
-    return ValueType::Boolean;
+    node.type = ValueType::Boolean;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const BinaryLogicalExpression &node) {
+  ValueType operator()(const AST &, BinaryLogicalExpression &node) {
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
@@ -83,35 +88,39 @@ public:
             node.location);
     }
 
-    return ValueType::Boolean;
+    node.type = ValueType::Boolean;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const ConstantValue &node) {
+  ValueType operator()(const AST &, ConstantValue &node) {
     if (std::get_if<double>(&node.value) != nullptr) {
-      return ValueType::Double;
+      node.type = ValueType::Double;
+      return node.type;
     } else if (std::get_if<bool>(&node.value) != nullptr) {
-      return ValueType::Boolean;
+      node.type = ValueType::Boolean;
+      return node.type;
     }
 
     error("Unable to obtain constant value type", node.location);
-    return ValueType::Double;
+    return ValueType::Any;
   }
 
-  ValueType operator()(const AST &, const Block &node) {
+  ValueType operator()(const AST &, Block &node) {
     if (node.children.empty()) {
       error("Block cannot by empty", node.location);
       return ValueType::Double;
     }
 
     ValueType type = ValueType::Double;
-    for (const auto &child : node.children) {
+    for (auto &child : node.children) {
       type = child.visit(*this);
     }
 
-    return type;
+    node.type = type;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const IfExpression &node) {
+  ValueType operator()(const AST &, IfExpression &node) {
     auto predType = node.condition.visit(*this);
     if (predType != ValueType::Boolean) {
       error("ValueType of condition expression in <if> is expected to be bool.",
@@ -127,10 +136,11 @@ public:
           node.location);
     }
 
-    return thenType;
+    node.type = thenType;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const WhileExpression &node) {
+  ValueType operator()(const AST &, WhileExpression &node) {
     auto predType = node.condition.visit(*this);
     if (predType != ValueType::Boolean) {
       error("ValueType of condition expression in <while..do> is expected to "
@@ -138,67 +148,74 @@ public:
             node.location);
     }
 
-    return node.body.visit(*this);
+    node.type = node.body.visit(*this);
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const BuiltInFunction &node) {
+  ValueType operator()(const AST &, BuiltInFunction &node) {
     switch (node.id) {
     case BuiltInFunctionId::Exp:
       if (node.arguments.size() != 1 ||
           node.arguments.front().visit(*this) != ValueType::Double) {
         error("Bultin function <exp> expects 1 double argument", node.location);
       }
-      return ValueType::Double;
+      node.type = ValueType::Double;
+      return node.type;
     case BuiltInFunctionId::Log:
       if (node.arguments.size() != 1 ||
           node.arguments.front().visit(*this) != ValueType::Double) {
         error("Bultin function <log> expects 1 double argument", node.location);
       }
-      return ValueType::Double;
+      node.type = ValueType::Double;
+      return node.type;
     case BuiltInFunctionId::Sqrt:
       if (node.arguments.size() != 1 ||
           node.arguments.front().visit(*this) != ValueType::Double) {
         error("Bultin function <sqrt> expects 1 double argument",
               node.location);
       }
-      return ValueType::Double;
+      node.type = ValueType::Double;
+      return node.type;
     case BuiltInFunctionId::Printd:
+      node.type = ValueType::Double;
       if (node.arguments.size() == 0) {
         error("Bultin function <printd> expects at least 1 argument",
               node.location);
-        return ValueType::Double;
+
+        return node.type;
       }
-      for (const auto &arg : node.arguments) {
+      for (auto &arg : node.arguments) {
         if (arg.visit(*this) != ValueType::Double) {
           error("Bultin function <printd> expects arguments of type double",
                 node.location);
         }
       }
-      return ValueType::Double;
+      return node.type;
     case BuiltInFunctionId::Printb:
+      node.type = ValueType::Boolean;
       if (node.arguments.size() == 0) {
         error("Bultin function <printb> expects at least 1 argument",
               node.location);
-        return ValueType::Boolean;
+        return node.type;
       }
-      for (const auto &arg : node.arguments) {
+      for (auto &arg : node.arguments) {
         if (arg.visit(*this) != ValueType::Boolean) {
           error("Bultin function <printd> expects arguments of type bool",
                 node.location);
         }
       }
-      return ValueType::Boolean;
+      return node.type;
     }
 
     error("Unknown bultin function", node.location);
-    return ValueType::Double;
+    return ValueType::Any;
   }
 
-  ValueType operator()(const AST &, const FunctionCall &node) {
+  ValueType operator()(const AST &, FunctionCall &node) {
     auto func = _functions.get(node.name);
     if (!func) {
       error("Function <" + node.name + "> is undefined", node.location);
-      return ValueType::Double;
+      return ValueType::Any;
     }
 
     if (node.arguments.size() != func->arguments.size()) {
@@ -221,10 +238,11 @@ public:
       }
     }
 
-    return func->returnType;
+    node.type = func->returnType;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const FunctionDefinition &node) {
+  ValueType operator()(const AST &, FunctionDefinition &node) {
     _functions.define(
         node.name, FunctionSymbol{node.returnType, node.arguments, node.code});
 
@@ -243,10 +261,11 @@ public:
       error(oss.str(), node.location);
     }
 
-    return node.returnType;
+    node.type = ValueType::Function;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const VariableDefinition &node) {
+  ValueType operator()(const AST &, VariableDefinition &node) {
     auto type = node.expr.visit(*this);
     if (type != node.type) {
       std::ostringstream oss;
@@ -260,12 +279,12 @@ public:
     return node.type;
   }
 
-  ValueType operator()(const AST &, const AssignmentExpression &node) {
+  ValueType operator()(const AST &, AssignmentExpression &node) {
     auto type = node.expr.visit(*this);
     auto varInfo = _variables.get(node.name);
     if (!varInfo) {
       error("Unknown variable " + node.name, node.location);
-      return type;
+      return ValueType::Any;
     }
 
     if (varInfo->isConstant) {
@@ -279,17 +298,19 @@ public:
       error(oss.str(), node.location);
     }
 
-    return varInfo->type;
+    node.type = varInfo->type;
+    return node.type;
   }
 
-  ValueType operator()(const AST &, const NameReference &node) {
+  ValueType operator()(const AST &, NameReference &node) {
     auto varInfo = _variables.get(node.name);
     if (!varInfo) {
       error("Unknown variable " + node.name, node.location);
-      return ValueType::Double;
+      return ValueType::Any;
     }
 
-    return varInfo->type;
+    node.type = varInfo->type;
+    return node.type;
   }
 
 private:
@@ -302,7 +323,7 @@ private:
   ErrorList &_errors;
 };
 
-ValueType checkTypes(const AST &ast, ErrorList &errors) {
+ValueType checkTypes(AST &ast, ErrorList &errors) {
   SymbolTable<VariableSymbol> variables{"global"};
   SymbolTable<FunctionSymbol> functions{"global"};
   TypeChecker typeChecker{variables, functions, errors};

@@ -44,7 +44,7 @@ AST generateAST(const std::string &code, const std::string &testName,
   return driver.getAST();
 }
 
-template <typename T> T interpret(const AST &ast, bool trace = false) {
+template <typename T> T interpret(AST &ast, bool trace = false) {
   cheasle::ErrorList typeCheckerErrors{};
   auto type = cheasle::checkTypes(ast, typeCheckerErrors);
 
