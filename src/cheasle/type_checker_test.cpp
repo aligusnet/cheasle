@@ -32,6 +32,22 @@ TEST_CASE("let and reference", "[type-checker]") {
     REQUIRE(type == ValueType::Double);
   }
 
+  SECTION("int") {
+    auto let = TAST::let("a", ValueType::Int, TAST::constant(10));
+    auto ref = TAST::ref("a");
+    auto ast = TAST::b({std::move(let), std::move(ref)});
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Int);
+  }
+
+  SECTION("double = int") {
+    auto let = TAST::let("a", ValueType::Double, TAST::constant(10));
+    auto ref = TAST::ref("a");
+    auto ast = TAST::b({std::move(let), std::move(ref)});
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Double);
+  }
+
   SECTION("bool") {
     auto let = TAST::let("a", ValueType::Boolean, TAST::constant(false));
     auto ref = TAST::ref("a");
@@ -77,6 +93,22 @@ TEST_CASE("let and assignment", "[type-checker]") {
   SECTION("double") {
     auto let = TAST::let("a", ValueType::Double, TAST::constant(10.0));
     auto assign = TAST::assig("a", TAST::constant(11.0));
+    auto ast = TAST::b({std::move(let), std::move(assign)});
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Double);
+  }
+
+  SECTION("int") {
+    auto let = TAST::let("a", ValueType::Int, TAST::constant(10));
+    auto assign = TAST::assig("a", TAST::constant(11));
+    auto ast = TAST::b({std::move(let), std::move(assign)});
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Int);
+  }
+
+  SECTION("double = int") {
+    auto let = TAST::let("a", ValueType::Double, TAST::constant(10.0));
+    auto assign = TAST::assig("a", TAST::constant(11));
     auto ast = TAST::b({std::move(let), std::move(assign)});
     auto type = checkTypes(ast);
     REQUIRE(type == ValueType::Double);
@@ -144,8 +176,14 @@ TEST_CASE("binary expressions", "[type-checker]") {
 
   SECTION("addition of int and double") {
     auto ast = TAST::add(TAST::constant(10), TAST::constant(20.0));
-    auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Int);
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Double);
+  }
+
+  SECTION("mul of double and int") {
+    auto ast = TAST::add(TAST::constant(10.1), TAST::constant(20));
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Double);
   }
 }
 
@@ -187,6 +225,12 @@ TEST_CASE("equality expressions", "[type-checker]") {
     auto type = checkTypes(ast);
     REQUIRE(type == ValueType::Boolean);
   }
+
+  SECTION("double == int") {
+    auto ast = TAST::ne(TAST::constant(10.0), TAST::constant(10));
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
 }
 
 TEST_CASE("comparison expressions", "[type-checker]") {
@@ -198,6 +242,12 @@ TEST_CASE("comparison expressions", "[type-checker]") {
 
   SECTION("int > int") {
     auto ast = TAST::gt(TAST::constant(10), TAST::constant(11));
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Boolean);
+  }
+
+  SECTION("int < double") {
+    auto ast = TAST::lt(TAST::constant(10), TAST::constant(11.0));
     auto type = checkTypes(ast);
     REQUIRE(type == ValueType::Boolean);
   }

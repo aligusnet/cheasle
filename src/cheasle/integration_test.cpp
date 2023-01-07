@@ -132,16 +132,16 @@ TEST_CASE("Fibonacci sequnce", "[integration]") {
 TEST_CASE("Sqrt", "[integration]") {
   std::string code =
       "def mySqrt(n: double) : double {\n"
-      "  def average(a: double, b: double) : double { (a+b)/2.0; }\n"
+      "  def average(a: double, b: double) : double { (a+b)/2; }\n"
       "  const eps: double = 0.0001;\n"
-      "  let e: double = 1.0;\n"
+      "  let e: double = 1;\n"
       "  let t: double = n;\n"
       "  while |t - e| > eps {\n"
       "    t = n / e;\n"
       "    e = average(e, t);\n"
       "  }\n"
       "}\n"
-      "const arg: double = 171.0;\n"
+      "const arg: double = 171;\n"
       "mySqrt(arg);\n";
   runIntegrationTest(code, "sqrt", false, sqrt(171.0));
 }

@@ -1,4 +1,5 @@
 #include "function_push_up.h"
+#include "cheasle/ast.h"
 #include "cheasle/symbol_table.h"
 #include "cheasle/type_checker.h"
 #include <memory>
@@ -364,6 +365,10 @@ public:
 
   std::optional<AST> operator()(const AST &, NameReference node) {
     return AST::make<NameReference>(std::move(node));
+  }
+
+  std::optional<AST> operator()(const AST &, TypeConversion node) {
+    return AST::make<TypeConversion>(std::move(node));
   }
 
 private:

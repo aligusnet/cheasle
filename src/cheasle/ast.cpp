@@ -12,6 +12,14 @@ struct TypeGetter {
 
 ValueType getType(const AST &ast) { return ast.visit(TypeGetter{}); }
 
+struct LocationGetter {
+  template <typename Node> location operator()(const AST &, const Node &node) {
+    return node.location;
+  }
+};
+
+location getLocation(const AST &ast) { return ast.visit(LocationGetter{}); }
+
 struct ASTPrinter {
   explicit ASTPrinter(std::ostream &os) : _os{os}, _indent(0) {}
 
@@ -139,6 +147,12 @@ struct ASTPrinter {
 
   void operator()(const AST &, const NameReference &node) { _os << node.name; }
 
+  void operator()(const AST &, const TypeConversion &node) {
+    _os << node.id << '(';
+    node.child.visit(*this);
+    _os << ')';
+  }
+
 private:
   void indent() { _os << std::string(_indent, ' '); }
 
@@ -235,6 +249,18 @@ std::ostream &operator<<(std::ostream &os, BuiltInFunctionId id) {
     break;
   case BuiltInFunctionId::Sqrt:
     os << "sqrt";
+    break;
+  }
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, TypeConversionId id) {
+  switch (id) {
+  case TypeConversionId::ftoi:
+    os << "ftoi";
+    break;
+  case TypeConversionId::itof:
+    os << "itof";
     break;
   }
   return os;

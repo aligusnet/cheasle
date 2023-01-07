@@ -498,6 +498,16 @@ public:
                                node.name);
   }
 
+  llvm::Value *operator()(const AST &, const TypeConversion &node) {
+    auto value = node.child.visit(*this);
+    switch (node.id) {
+    case TypeConversionId::ftoi:
+      return _builder.CreateFPToSI(value, getLlvmType(node.type));
+    case TypeConversionId::itof:
+      return _builder.CreateSIToFP(value, getLlvmType(node.type));
+    }
+  }
+
 private:
   CodeGenerator(const CodeGenerator &parent) = delete;
   CodeGenerator(CodeGenerator &&parent) = delete;

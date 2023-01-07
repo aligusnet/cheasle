@@ -108,6 +108,32 @@ TEST_CASE("binary expression - int", "[llvm jit]") {
   }
 }
 
+TEST_CASE("binary expression - double and int", "[llvm jit]") {
+  SECTION("double + double") {
+    auto ast = TAST::add(TAST::constant(11.0), TAST::constant(100));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(111.0, 1e-8));
+  }
+
+  SECTION("double - double") {
+    auto ast = TAST::sub(TAST::constant(11), TAST::constant(100.0));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(-89.0, 1e-8));
+  }
+
+  SECTION("double * double") {
+    auto ast = TAST::mul(TAST::constant(11.0), TAST::constant(100));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(1100.0, 1e-8));
+  }
+
+  SECTION("double / double") {
+    auto ast = TAST::div(TAST::constant(11), TAST::constant(100.0));
+    auto result = compileAndRun<double>(std::move(ast));
+    REQUIRE_THAT(result, WithinRel(0.11, 1e-8));
+  }
+}
+
 TEST_CASE("user functions", "[llvm jit]") {
   auto body = TAST::add(TAST::ref("a"), TAST::ref("b"));
   auto function = TAST::def("add", {"a", "b"}, std::move(body));
@@ -252,6 +278,12 @@ TEST_CASE("Equality expressions", "[llvm jit]") {
     REQUIRE(result == false);
   }
 
+  SECTION("int == double") {
+    auto ast = TAST::eq(TAST::constant(10), TAST::constant(11.0));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+
   SECTION("double != double") {
     auto ast = TAST::ne(TAST::constant(10.1), TAST::constant(10.2));
     auto result = compileAndRun<bool>(std::move(ast));
@@ -264,8 +296,8 @@ TEST_CASE("Equality expressions", "[llvm jit]") {
     REQUIRE(result == true);
   }
 
-  SECTION("int != int") {
-    auto ast = TAST::ne(TAST::constant(10), TAST::constant(11));
+  SECTION("double != int") {
+    auto ast = TAST::ne(TAST::constant(10.0), TAST::constant(11));
     auto result = compileAndRun<bool>(std::move(ast));
     REQUIRE(result == true);
   }
@@ -323,6 +355,32 @@ TEST_CASE("Comparison expressions - int", "[llvm jit]") {
   }
 }
 
+TEST_CASE("Comparison expressions - double and int", "[llvm jit]") {
+  SECTION("double >= int") {
+    auto ast = TAST::ge(TAST::constant(10.0), TAST::constant(10));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+
+  SECTION("int > double") {
+    auto ast = TAST::gt(TAST::constant(10), TAST::constant(10.0));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+
+  SECTION("double <= int") {
+    auto ast = TAST::le(TAST::constant(10.0), TAST::constant(10));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == true);
+  }
+
+  SECTION("int < double") {
+    auto ast = TAST::lt(TAST::constant(10), TAST::constant(10.0));
+    auto result = compileAndRun<bool>(std::move(ast));
+    REQUIRE(result == false);
+  }
+}
+
 TEST_CASE("Logical expressions", "[llvm jit]") {
   SECTION("true and true") {
     auto ast = TAST::andexp(TAST::constant(true), TAST::constant(true));
@@ -372,6 +430,26 @@ TEST_CASE("let and reference", "[llvm jit]") {
     REQUIRE_THAT(result, WithinRel(10.0, 1e-10));
   }
 
+  SECTION("int") {
+    auto letAst = TAST::let("a", ValueType::Int, TAST::constant(10));
+    auto refAst = TAST::ref("a");
+    auto ast = TAST::b({letAst, refAst});
+
+    auto result = compileAndRun<int32_t>(ast);
+
+    REQUIRE(result == 10);
+  }
+
+  SECTION("double = int") {
+    auto letAst = TAST::let("a", TAST::constant(10));
+    auto refAst = TAST::ref("a");
+    auto ast = TAST::b({letAst, refAst});
+
+    auto result = compileAndRun<double>(ast);
+
+    REQUIRE_THAT(result, WithinRel(10.0, 1e-10));
+  }
+
   SECTION("string") {
     auto letAst =
         TAST::let("a", ValueType::String, TAST::constant("Hello, LLVM!"));
@@ -384,9 +462,21 @@ TEST_CASE("let and reference", "[llvm jit]") {
   }
 }
 
-TEST_CASE("let, assign and reference", "[llvm jit]") {
+TEST_CASE("let, assign and reference [double]", "[llvm jit]") {
   auto letAst = TAST::let("a", TAST::constant(10.0));
   auto assignAst = TAST::assig("a", TAST::constant(20.0));
+  auto refAst = TAST::ref("a");
+  auto ast =
+      TAST::b({std::move(letAst), std::move(assignAst), std::move(refAst)});
+
+  auto result = compileAndRun<double>(ast);
+
+  REQUIRE_THAT(result, WithinRel(20.0, 1e-10));
+}
+
+TEST_CASE("let, assign and reference [double, int]", "[llvm jit]") {
+  auto letAst = TAST::let("a", TAST::constant(10.0));
+  auto assignAst = TAST::assig("a", TAST::constant(20));
   auto refAst = TAST::ref("a");
   auto ast =
       TAST::b({std::move(letAst), std::move(assignAst), std::move(refAst)});

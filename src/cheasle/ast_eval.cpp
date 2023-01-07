@@ -355,6 +355,28 @@ public:
     }
   }
 
+  std::optional<Value> operator()(const AST &, const TypeConversion &node) {
+    auto value = node.child.visit(*this);
+    switch (node.id) {
+    case TypeConversionId::itof: {
+      auto v = calcValue<int32_t>(node.child);
+      if (!v) {
+        error("ftoi expects value of type int", node.location);
+        return nullptr;
+      }
+      return static_cast<double>(*v);
+    }
+    case TypeConversionId::ftoi: {
+      auto v = calcValue<double>(node.child);
+      if (!v) {
+        error("itof expects value of type double", node.location);
+        return nullptr;
+      }
+      return static_cast<int32_t>(*v);
+    }
+    }
+  }
+
   std::optional<Value> callExp(const std::vector<AST> arguments,
                                const location &location) {
     if (arguments.size() == 1) {

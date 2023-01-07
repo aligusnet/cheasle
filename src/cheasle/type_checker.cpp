@@ -2,8 +2,10 @@
 #include "cheasle/ast.h"
 #include "cheasle/printf_utils.h"
 #include "cheasle/value.h"
+#include "location.h"
 #include <cheasle/symbol.h>
 #include <cheasle/symbol_table.h>
+#include <optional>
 #include <sstream>
 
 namespace cheasle {
@@ -17,15 +19,25 @@ public:
   ValueType operator()(const AST &, BinaryExpression &node) {
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
+    node.type = lhs; // default value, can be change because of conversions.
 
     const ValueTypeMask typeMask = ValueType::Double | ValueType::Int;
-    if (lhs != rhs || !typeMask.check(lhs)) {
-      error("Binary expression expects both operands having the same double, "
-            "int type",
+    if (!typeMask.check(lhs) || !typeMask.check(rhs)) {
+      error("Binary expression expects both operands must be of double or int "
+            "type",
             node.location);
+      return node.type;
     }
 
-    node.type = lhs;
+    if (lhs != rhs) {
+      auto commonType = insertConversion(node);
+      if (commonType) {
+        node.type = *commonType;
+      } else {
+        conversionError(lhs, rhs, "binary expression", node.location);
+      }
+    }
+
     return node.type;
   }
 
@@ -46,15 +58,24 @@ public:
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
+    node.type = ValueType::Boolean;
+
     const ValueTypeMask typeMask =
         ValueType::Boolean | ValueType::Int | ValueType::Double;
-    if (lhs != rhs || !typeMask.check(lhs)) {
-      error("Equality expression expects both operands having the same bool, "
+    if (!typeMask.check(lhs) || !typeMask.check(rhs)) {
+      error("Equality expression expects both operands having bool, "
             "int, double type",
             node.location);
+      return node.type;
     }
 
-    node.type = ValueType::Boolean;
+    if (lhs != rhs) {
+      auto commonType = insertConversion(node);
+      if (!commonType) {
+        conversionError(lhs, rhs, "equality expression", node.location);
+      }
+    }
+
     return node.type;
   }
 
@@ -62,14 +83,23 @@ public:
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
+    node.type = ValueType::Boolean;
+
     const ValueTypeMask typeMask = ValueType::Int | ValueType::Double;
-    if (lhs != rhs || !typeMask.check(lhs)) {
+    if (!typeMask.check(lhs) || !typeMask.check(rhs)) {
       error("Comparison expression expects both operands having the same "
             "int, double type",
             node.location);
+      return node.type;
     }
 
-    node.type = ValueType::Boolean;
+    if (lhs != rhs) {
+      auto commonType = insertConversion(node);
+      if (!commonType) {
+        conversionError(lhs, rhs, "comparison expression", node.location);
+      }
+    }
+
     return node.type;
   }
 
@@ -283,7 +313,8 @@ public:
 
   ValueType operator()(const AST &, VariableDefinition &node) {
     auto type = node.expr.visit(*this);
-    if (type != node.type) {
+    auto commonType = assignmentConversion(node, node.type);
+    if (!commonType) {
       std::ostringstream oss;
       oss << "Variable <" << node.name << "> declared as " << node.type
           << " but is assigned to " << type << " value";
@@ -302,19 +333,22 @@ public:
       error("Unknown variable " + node.name, node.location);
       return ValueType::Any;
     }
+    node.type = varInfo->type;
 
     if (varInfo->isConstant) {
       error("Assignment to constant variable " + node.name, node.location);
     }
 
-    if (type != varInfo->type) {
+    auto commonType = assignmentConversion(node, varInfo->type);
+    if (!commonType) {
       std::ostringstream oss;
       oss << "Variable <" << node.name << "> declared as " << varInfo->type
           << " but is assigned to " << type << " value";
       error(oss.str(), node.location);
+    } else {
+      node.type = *commonType;
     }
 
-    node.type = varInfo->type;
     return node.type;
   }
 
@@ -329,7 +363,95 @@ public:
     return node.type;
   }
 
+  ValueType operator()(const AST &, TypeConversion &node) {
+    auto child = node.child.visit(*this);
+    switch (node.id) {
+    case TypeConversionId::ftoi:
+      node.type = ValueType::Int;
+      if (child != ValueType::Double) {
+        error("ftoi conversion expects a hild expression of double type",
+              node.location);
+      }
+      break;
+    case TypeConversionId::itof:
+      node.type = ValueType::Double;
+      if (child != ValueType::Int) {
+        error("itof conversion expects a hild expression of int type",
+              node.location);
+      }
+      break;
+    }
+    return node.type;
+  }
+
 private:
+  // returns Common type if conversion found
+  template <typename BinaryNode>
+  std::optional<ValueType> insertConversion(BinaryNode &node) {
+    ValueType lhs = getType(node.lhs);
+    ValueType rhs = getType(node.rhs);
+    const auto &[type, lhsConv, rhsConv] = findNumberConversion(lhs, rhs);
+    if (!type) {
+      return type;
+    }
+
+    if (lhsConv) {
+      auto location = getLocation(node.lhs);
+      node.lhs = AST::make<TypeConversion>(std::move(node.lhs), *lhsConv, *type,
+                                           std::move(location));
+    }
+
+    if (rhsConv) {
+      auto location = getLocation(node.rhs);
+      node.rhs = AST::make<TypeConversion>(std::move(node.rhs), *rhsConv, *type,
+                                           std::move(location));
+    }
+
+    return type;
+  }
+
+  template <typename Node>
+  std::optional<ValueType> assignmentConversion(Node &node,
+                                                ValueType expectedType) {
+    auto actualType = node.expr.visit(*this);
+    if (actualType == expectedType) {
+      return expectedType;
+    }
+
+    // the only allowed automatic conversion: double = int
+    if (actualType == ValueType::Int && expectedType == ValueType::Double) {
+      auto location = getLocation(node.expr);
+      node.expr = AST::make<TypeConversion>(std::move(node.expr),
+                                            TypeConversionId::itof,
+                                            expectedType, std::move(location));
+      return expectedType;
+    }
+
+    return std::nullopt;
+  }
+
+  std::tuple<std::optional<ValueType>, std::optional<TypeConversionId>,
+             std::optional<TypeConversionId>>
+  findNumberConversion(ValueType lhsType, ValueType rhsType) {
+    if (lhsType == ValueType::Int && rhsType == ValueType::Double) {
+      return {ValueType::Double, TypeConversionId::itof, std::nullopt};
+    }
+
+    if (lhsType == ValueType::Double && rhsType == ValueType::Int) {
+      return {ValueType::Double, std::nullopt, TypeConversionId::itof};
+    }
+
+    return {std::nullopt, std::nullopt, std::nullopt};
+  }
+
+  void conversionError(ValueType lhs, ValueType rhs, std::string nodeType,
+                       location location) {
+    std::ostringstream oss;
+    oss << "No suitable conversion between " << lhs << " and " << rhs
+        << " found for " << nodeType;
+    error(oss.str(), std::move(location));
+  }
+
   void error(std::string message, location location) {
     _errors.append("type-checker", std::move(message), std::move(location));
   }

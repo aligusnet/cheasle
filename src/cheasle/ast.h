@@ -25,12 +25,13 @@ struct FunctionDefinition;
 struct VariableDefinition;
 struct AssignmentExpression;
 struct NameReference;
+struct TypeConversion;
 
 using AST = mongodb::PolyValue<
     BinaryExpression, UnaryExpression, EqualityExpression, ComparisonExpression,
     BinaryLogicalExpression, NotExpression, ConstantValue, Block, IfExpression,
     WhileExpression, BuiltInFunction, FunctionDefinition, FunctionCall,
-    VariableDefinition, AssignmentExpression, NameReference>;
+    VariableDefinition, AssignmentExpression, NameReference, TypeConversion>;
 
 enum class BinaryOperator { Add, Subtract, Multiply, Divide };
 
@@ -235,7 +236,26 @@ struct NameReference {
   location location;
 };
 
+enum class TypeConversionId { itof, ftoi };
+
+struct TypeConversion {
+  TypeConversion(AST child, TypeConversionId id, location location)
+      : child(std::move(child)), id(id), type(ValueType::Any),
+        location(std::move(location)) {}
+
+  TypeConversion(AST child, TypeConversionId id, ValueType type,
+                 location location)
+      : child(std::move(child)), id(id), type(type),
+        location(std::move(location)) {}
+
+  AST child;
+  TypeConversionId id;
+  ValueType type;
+  location location;
+};
+
 ValueType getType(const AST &ast);
+location getLocation(const AST &ast);
 
 std::ostream &operator<<(std::ostream &os, BinaryOperator op);
 std::ostream &operator<<(std::ostream &os, UnaryOperator op);
@@ -243,5 +263,6 @@ std::ostream &operator<<(std::ostream &os, EqualityOperator op);
 std::ostream &operator<<(std::ostream &os, ComparisonOperator op);
 std::ostream &operator<<(std::ostream &os, BinaryLogicalOperator op);
 std::ostream &operator<<(std::ostream &os, BuiltInFunctionId id);
+std::ostream &operator<<(std::ostream &os, TypeConversionId id);
 std::ostream &operator<<(std::ostream &os, const AST &ast);
 } // namespace cheasle

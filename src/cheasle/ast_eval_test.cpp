@@ -52,6 +52,17 @@ TEST_CASE("let and reference [int]", "[ast-eval]") {
   REQUIRE(std::get<int32_t>(*result) == 10);
 }
 
+TEST_CASE("let and reference [double, int]", "[ast-eval]") {
+  auto letAst = TAST::let("a", ValueType::Double, TAST::constant(10));
+  auto refAst = TAST::ref("a");
+  auto ast = TAST::b({letAst, refAst});
+
+  auto result = eval(ast);
+
+  REQUIRE_DOUBLE(result);
+  REQUIRE_THAT(std::get<double>(*result), WithinRel(10.0, 1e-5));
+}
+
 TEST_CASE("const and reference", "[ast-eval]") {
   auto letAst = TAST::constexp("a", TAST::constant(10.0));
   auto refAst = TAST::ref("a");
@@ -131,6 +142,40 @@ TEST_CASE("binary expression - int", "[ast-eval]") {
   }
 }
 
+TEST_CASE("binary expression - int and double", "[ast-eval]") {
+  SECTION("add") {
+    auto ast = TAST::add(TAST::constant(10), TAST::constant(17.0));
+    auto result = eval(ast);
+
+    REQUIRE_DOUBLE(result);
+    REQUIRE_THAT(std::get<double>(*result), WithinRel(27.0, 1e-5));
+  }
+
+  SECTION("substract") {
+    auto ast = TAST::sub(TAST::constant(10.0), TAST::constant(17));
+    auto result = eval(ast);
+
+    REQUIRE_DOUBLE(result);
+    REQUIRE_THAT(std::get<double>(*result), WithinRel(-7.0, 1e-5));
+  }
+
+  SECTION("multiply") {
+    auto ast = TAST::mul(TAST::constant(10), TAST::constant(17.0));
+    auto result = eval(ast);
+
+    REQUIRE_DOUBLE(result);
+    REQUIRE_THAT(std::get<double>(*result), WithinRel(170.0, 1e-5));
+  }
+
+  SECTION("divide") {
+    auto ast = TAST::div(TAST::constant(10.0), TAST::constant(17));
+    auto result = eval(ast);
+
+    REQUIRE_DOUBLE(result);
+    REQUIRE_THAT(std::get<double>(*result), WithinRel(0.588235, 1e-5));
+  }
+}
+
 TEST_CASE("unary expression - double", "[ast-eval]") {
   SECTION("minus") {
     auto ast = TAST::minus(TAST::constant(-7.1));
@@ -167,7 +212,8 @@ TEST_CASE("unary expression - int", "[ast-eval]") {
   }
 }
 
-template <typename T> void testEqualityAndComparisonExpressions(T lhs, T rhs) {
+template <typename L, typename R>
+void testEqualityAndComparisonExpressions(L lhs, R rhs) {
   {
     auto ast = TAST::gt(TAST::constant(lhs), TAST::constant(rhs));
     auto result = eval(ast);
@@ -245,6 +291,18 @@ TEST_CASE("equality and comparison expression - int", "[ast-eval]") {
   SECTION("-11 <=> -11") { testEqualityAndComparisonExpressions(-11, -11); }
   SECTION("11 <=> -11") { testEqualityAndComparisonExpressions(11, -11); }
   SECTION("-11 <=> 11") { testEqualityAndComparisonExpressions(-11, 11); }
+}
+
+TEST_CASE("equality and comparison expression - double, int", "[ast-eval]") {
+  SECTION("1 <=> 5.0") { testEqualityAndComparisonExpressions(1, 5.0); }
+  SECTION("-1.0 <=> -5") { testEqualityAndComparisonExpressions(-1.0, -5); }
+  SECTION("1 <=> -5.0") { testEqualityAndComparisonExpressions(1, -5.0); }
+  SECTION("-1.0 <=> 5") { testEqualityAndComparisonExpressions(-1.0, 5); }
+
+  SECTION("11 <=> 11.0") { testEqualityAndComparisonExpressions(11, 11.0); }
+  SECTION("-11.0 <=> -11") { testEqualityAndComparisonExpressions(-11.0, -11); }
+  SECTION("11 <=> -11.0") { testEqualityAndComparisonExpressions(11, -11.0); }
+  SECTION("-11.0 <=> 11") { testEqualityAndComparisonExpressions(-11.0, 11); }
 }
 
 TEST_CASE("binary logical expression", "[ast-eval]") {
