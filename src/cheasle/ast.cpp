@@ -4,6 +4,14 @@
 
 namespace cheasle {
 
+struct TypeGetter {
+  template <typename Node> ValueType operator()(const AST &, const Node &node) {
+    return node.type;
+  }
+};
+
+ValueType getType(const AST &ast) { return ast.visit(TypeGetter{}); }
+
 struct ASTPrinter {
   explicit ASTPrinter(std::ostream &os) : _os{os}, _indent(0) {}
 

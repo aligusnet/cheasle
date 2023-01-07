@@ -53,6 +53,7 @@ float -?([0-9]*[.])?[0-9]+
 "not"   { return cheasle::Parser::make_NOT(location()); }
 
 /* values */
+[0-9]+ { return cheasle::Parser::make_VALUE(atoi(text()), location()); }
 {float} { return cheasle::Parser::make_VALUE(atof(text()), location()); }
 \"(\\.|\"\"|[^"\n])*\" { return cheasle::Parser::make_VALUE(str().substr(1, size()-2), location()); }
 \"(\\.|[^"\n])*$    { cheasle::Parser::syntax_error(location(), std::string("Unterminated string ") + text()); }
@@ -61,8 +62,10 @@ float -?([0-9]*[.])?[0-9]+
 
 /* data types */
 "bool" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Boolean, location()); }
+"int" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Int, location()); }
 "double" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Double, location()); }
 "string" { return cheasle::Parser::make_VALUE_TYPE(ValueType::String, location()); }
+
 
 /* keywords */
 "if"    { return cheasle::Parser::make_IF(location()); }

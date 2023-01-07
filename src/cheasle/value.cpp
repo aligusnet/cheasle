@@ -49,6 +49,10 @@ bool ValueTypeMask::check(const Value &value) const {
          checkValueTypeFor<ValueType::String>(*this, value);
 }
 
+bool ValueTypeMask::check(const ValueType &type) const {
+  return (*this & type) == type;
+}
+
 bool checkValueType(ValueType type, const Value &value) {
   switch (type) {
   case ValueType::Boolean:

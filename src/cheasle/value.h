@@ -21,6 +21,7 @@ struct ValueTypeMask {
   ValueTypeMask(ValueType type) : ValueTypeMask(static_cast<T>(type)) {}
   T mask;
   bool check(const Value &value) const;
+  bool check(const ValueType &type) const;
   bool empty() const { return mask == 0; }
 };
 
@@ -34,6 +35,11 @@ inline bool operator==(ValueTypeMask lhs, ValueType rhs) {
 }
 
 inline bool operator==(ValueType lhs, ValueTypeMask rhs) { return rhs == lhs; }
+
+inline ValueTypeMask operator|(ValueTypeMask lhs, ValueType rhs) {
+  using T = std::underlying_type_t<ValueType>;
+  return ValueTypeMask{lhs.mask | static_cast<T>(rhs)};
+}
 
 inline ValueTypeMask operator|(ValueType lhs, ValueType rhs) {
   using T = std::underlying_type_t<ValueType>;

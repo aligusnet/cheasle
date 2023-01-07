@@ -115,33 +115,33 @@ void runIntegrationTest(const std::string &code, const std::string &testName,
 
 TEST_CASE("Fibonacci sequnce", "[integration]") {
   std::string code = "def fibonacci(n: double): double {\n"
-                     "  if n == 0 {\n"
-                     "    0;\n"
+                     "  if n == 0.0 {\n"
+                     "    0.0;\n"
                      "  } else {\n"
-                     "    if n == 1 {\n"
-                     "      1;\n"
+                     "    if n == 1.0 {\n"
+                     "      1.0;\n"
                      "    } else {\n"
-                     "      fibonacci(n - 1) + fibonacci(n - 2);\n"
+                     "      fibonacci(n - 1.0) + fibonacci(n - 2.0);\n"
                      "    }\n"
                      "  }\n"
                      "}\n"
-                     "fibonacci(21);\n";
+                     "fibonacci(21.0);\n";
   runIntegrationTest(code, "fibonacci", false, 10946.0);
 }
 
 TEST_CASE("Sqrt", "[integration]") {
   std::string code =
       "def mySqrt(n: double) : double {\n"
-      "  def average(a: double, b: double) : double { (a+b)/2; }\n"
+      "  def average(a: double, b: double) : double { (a+b)/2.0; }\n"
       "  const eps: double = 0.0001;\n"
-      "  let e: double = 1;\n"
+      "  let e: double = 1.0;\n"
       "  let t: double = n;\n"
       "  while |t - e| > eps {\n"
       "    t = n / e;\n"
       "    e = average(e, t);\n"
       "  }\n"
       "}\n"
-      "const arg: double = 171;\n"
+      "const arg: double = 171.0;\n"
       "mySqrt(arg);\n";
   runIntegrationTest(code, "sqrt", false, sqrt(171.0));
 }

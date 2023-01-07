@@ -235,6 +235,8 @@ struct NameReference {
   location location;
 };
 
+ValueType getType(const AST &ast);
+
 std::ostream &operator<<(std::ostream &os, BinaryOperator op);
 std::ostream &operator<<(std::ostream &os, UnaryOperator op);
 std::ostream &operator<<(std::ostream &os, EqualityOperator op);
@@ -242,5 +244,4 @@ std::ostream &operator<<(std::ostream &os, ComparisonOperator op);
 std::ostream &operator<<(std::ostream &os, BinaryLogicalOperator op);
 std::ostream &operator<<(std::ostream &os, BuiltInFunctionId id);
 std::ostream &operator<<(std::ostream &os, const AST &ast);
-
 } // namespace cheasle

@@ -231,4 +231,12 @@ TEST_CASE("string constant", "[parser]") {
   REQUIRE_AST(expected, ast);
 }
 
+TEST_CASE("int constant", "[parser]") {
+  std::string code = "100;";
+  auto ast = parse(code);
+
+  auto expected = TAST::b(TAST::constant(100));
+  REQUIRE_AST(expected, ast);
+}
+
 } // namespace cheasle

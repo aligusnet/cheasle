@@ -18,25 +18,27 @@ public:
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
-    if (lhs != ValueType::Double || rhs != ValueType::Double) {
-      error(
-          "Binary expression expects both operands having the same double type",
-          node.location);
+    const ValueTypeMask typeMask = ValueType::Double | ValueType::Int;
+    if (lhs != rhs || !typeMask.check(lhs)) {
+      error("Binary expression expects both operands having the same double, "
+            "int type",
+            node.location);
     }
 
-    node.type = ValueType::Double;
+    node.type = lhs;
     return node.type;
   }
 
   ValueType operator()(const AST &, UnaryExpression &node) {
     auto child = node.child.visit(*this);
 
-    if (child != ValueType::Double) {
-      error("Unary expression expects an operand of double type",
+    const ValueTypeMask typeMask = ValueType::Double | ValueType::Int;
+    if (!typeMask.check(child)) {
+      error("Unary expression expects an operand of double, int type",
             node.location);
     }
 
-    node.type = ValueType::Double;
+    node.type = child;
     return node.type;
   }
 
@@ -44,9 +46,11 @@ public:
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
-    if (lhs != rhs) {
-      error("Equality expression expects both operands having the same "
-            "double type",
+    const ValueTypeMask typeMask =
+        ValueType::Boolean | ValueType::Int | ValueType::Double;
+    if (lhs != rhs || !typeMask.check(lhs)) {
+      error("Equality expression expects both operands having the same bool, "
+            "int, double type",
             node.location);
     }
 
@@ -58,9 +62,10 @@ public:
     auto lhs = node.lhs.visit(*this);
     auto rhs = node.rhs.visit(*this);
 
-    if (lhs != ValueType::Double || rhs != ValueType::Double) {
+    const ValueTypeMask typeMask = ValueType::Int | ValueType::Double;
+    if (lhs != rhs || !typeMask.check(lhs)) {
       error("Comparison expression expects both operands having the same "
-            "double type",
+            "int, double type",
             node.location);
     }
 
@@ -72,7 +77,7 @@ public:
     auto child = node.child.visit(*this);
 
     if (child != ValueType::Boolean) {
-      error("Not expression expects an operand of double type", node.location);
+      error("Not expression expects an operand of boolean type", node.location);
     }
 
     node.type = ValueType::Boolean;
@@ -326,7 +331,7 @@ public:
 
 private:
   void error(std::string message, location location) {
-    _errors.append("type-checkerÍ", std::move(message), std::move(location));
+    _errors.append("type-checker", std::move(message), std::move(location));
   }
 
   SymbolTable<VariableSymbol> &_variables;
