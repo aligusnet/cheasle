@@ -114,19 +114,19 @@ void runIntegrationTest(const std::string &code, const std::string &testName,
 }
 
 TEST_CASE("Fibonacci sequnce", "[integration]") {
-  std::string code = "def fibonacci(n: double): double {\n"
-                     "  if n == 0.0 {\n"
-                     "    0.0;\n"
+  std::string code = "def fibonacci(n: int): int {\n"
+                     "  if n == 0 {\n"
+                     "    0;\n"
                      "  } else {\n"
-                     "    if n == 1.0 {\n"
-                     "      1.0;\n"
+                     "    if n == 1 {\n"
+                     "      1;\n"
                      "    } else {\n"
-                     "      fibonacci(n - 1.0) + fibonacci(n - 2.0);\n"
+                     "      fibonacci(n - 1) + fibonacci(n - 2);\n"
                      "    }\n"
                      "  }\n"
                      "}\n"
-                     "fibonacci(21.0);\n";
-  runIntegrationTest(code, "fibonacci", false, 10946.0);
+                     "fibonacci(21);\n";
+  runIntegrationTest(code, "fibonacci", false, 10946);
 }
 
 TEST_CASE("Sqrt", "[integration]") {

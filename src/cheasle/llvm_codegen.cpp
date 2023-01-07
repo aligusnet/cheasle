@@ -31,10 +31,11 @@ public:
       : _errors(errors), _context(context), _module(module), _builder(builder),
         _namedValues("global"), _functions("global") {
     // Set BuiltIn functions.
-    setBuiltinMathFunction("sqrt");
-    setBuiltinMathFunction("log");
-    setBuiltinMathFunction("exp");
-    setBuiltinMathFunction("fabs");
+    setBuiltinMathFunction("sqrt", ValueType::Double);
+    setBuiltinMathFunction("log", ValueType::Double);
+    setBuiltinMathFunction("exp", ValueType::Double);
+    setBuiltinMathFunction("fabs", ValueType::Double);
+    setBuiltinMathFunction("abs", ValueType::Int);
     setBuiltinPrintfFunction();
   }
 
@@ -44,7 +45,34 @@ public:
     if (lhs == nullptr || rhs == nullptr) {
       return nullptr;
     }
-    switch (node.op) {
+    switch (node.type) {
+    case ValueType::Int:
+      return intBinaryExpressions(lhs, rhs, node.op);
+    case ValueType::Double:
+      return floatBinaryExpressions(lhs, rhs, node.op);
+    default:
+      error("Unexpected expression type", node.location);
+      return nullptr;
+    }
+  }
+
+  llvm::Value *intBinaryExpressions(llvm::Value *lhs, llvm::Value *rhs,
+                                    BinaryOperator op) {
+    switch (op) {
+    case BinaryOperator::Add:
+      return _builder.CreateAdd(lhs, rhs, "add");
+    case BinaryOperator::Subtract:
+      return _builder.CreateSub(lhs, rhs, "sub");
+    case BinaryOperator::Multiply:
+      return _builder.CreateMul(lhs, rhs, "mul");
+    case BinaryOperator::Divide:
+      return _builder.CreateSDiv(lhs, rhs, "sdiv");
+    }
+  }
+
+  llvm::Value *floatBinaryExpressions(llvm::Value *lhs, llvm::Value *rhs,
+                                      BinaryOperator op) {
+    switch (op) {
     case BinaryOperator::Add:
       return _builder.CreateFAdd(lhs, rhs, "add");
     case BinaryOperator::Subtract:
@@ -57,6 +85,35 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const UnaryExpression &node) {
+    switch (node.type) {
+    case ValueType::Int:
+      return intUnaryExpression(node);
+    case ValueType::Double:
+      return floatUnaryExpression(node);
+    default:
+      error("Unexpected unary expression type", node.location);
+      return nullptr;
+    }
+  }
+
+  llvm::Value *intUnaryExpression(const UnaryExpression &node) {
+    switch (node.op) {
+    case UnaryOperator::Abs:
+      return callFunction("abs", std::vector<AST>{node.child}, node.location);
+
+    case UnaryOperator::Minus: {
+      auto val = node.child.visit(*this);
+      if (val == nullptr) {
+        return nullptr;
+      }
+      auto minusOne =
+          llvm::ConstantInt::getSigned(getLlvmType(ValueType::Int), -1);
+      return _builder.CreateMul(minusOne, val, "minus");
+    }
+    }
+  }
+
+  llvm::Value *floatUnaryExpression(const UnaryExpression &node) {
     switch (node.op) {
     case UnaryOperator::Abs:
       return callFunction("fabs", std::vector<AST>{node.child}, node.location);
@@ -66,7 +123,7 @@ public:
         return nullptr;
       }
       auto minusOne = llvm::ConstantFP::get(_context, llvm::APFloat(-1.0));
-      return _builder.CreateFMul(minusOne, val, "minus");
+      return _builder.CreateFMul(minusOne, val, "fminus");
     }
     }
     error("Unknown unary operator", node.location);
@@ -119,15 +176,41 @@ public:
 
     auto lhsType = lhs->getType();
     auto rhsType = rhs->getType();
-    if (lhsType != rhsType || !lhsType->isFloatingPointTy()) {
+    if (lhsType != rhsType) {
       error(
           "Both operands of comparison expression are exptected to be the same "
-          "type of double.",
+          "type.",
           node.location);
       return nullptr;
     }
 
-    switch (node.op) {
+    if (lhsType->isFloatingPointTy()) {
+      return floatComparisonExpression(lhs, rhs, node.op);
+    } else if (lhsType->isIntegerTy()) {
+      return intComparisonExpression(lhs, rhs, node.op);
+    } else {
+      error("Unexpected comparison expression type", node.location);
+      return nullptr;
+    }
+  }
+
+  llvm::Value *intComparisonExpression(llvm::Value *lhs, llvm::Value *rhs,
+                                       ComparisonOperator op) {
+    switch (op) {
+    case ComparisonOperator::GE:
+      return _builder.CreateICmpSGE(lhs, rhs);
+    case ComparisonOperator::GT:
+      return _builder.CreateICmpSGT(lhs, rhs);
+    case ComparisonOperator::LE:
+      return _builder.CreateICmpSLE(lhs, rhs);
+    case ComparisonOperator::LT:
+      return _builder.CreateICmpSLT(lhs, rhs);
+    }
+  }
+
+  llvm::Value *floatComparisonExpression(llvm::Value *lhs, llvm::Value *rhs,
+                                         ComparisonOperator op) {
+    switch (op) {
     case ComparisonOperator::GE:
       return _builder.CreateFCmpOGE(lhs, rhs);
     case ComparisonOperator::GT:
@@ -137,9 +220,6 @@ public:
     case ComparisonOperator::LT:
       return _builder.CreateFCmpOLT(lhs, rhs);
     }
-
-    error("Unknown comparison expression operator", node.location);
-    return nullptr;
   }
 
   llvm::Value *operator()(const AST &, const BinaryLogicalExpression &node) {
@@ -150,10 +230,10 @@ public:
     }
 
     if (!isBoolean(lhs) || !isBoolean(rhs)) {
-      error(
-          "Both operands of comparison expression are exptected to be the same "
-          "type of bool.",
-          node.location);
+      error("Both operands of comparison expression are exptected to be the "
+            "same "
+            "type of bool.",
+            node.location);
       return nullptr;
     }
 
@@ -192,8 +272,8 @@ public:
       return _builder.CreateGlobalString(std::get<std::string>(node.value), "",
                                          0, &_module);
     case ValueType::Int:
-      return llvm::Constant::getIntegerValue(
-          getLlvmType(node.type), llvm::APSInt(std::get<int32_t>(node.value)));
+      return llvm::ConstantInt::getSigned(getLlvmType(node.type),
+                                          std::get<int32_t>(node.value));
     case ValueType::Function:
       error("Cannot create a value of type function", node.location);
       return nullptr;
@@ -469,11 +549,11 @@ private:
     return function;
   }
 
-  void setBuiltinMathFunction(const std::string &name) {
+  void setBuiltinMathFunction(const std::string &name, ValueType type) {
     auto optFunc = _functions.get(name);
     if (!optFunc) {
-      auto func = generateFunctionPrototype(
-          name, ValueType::Double, {FunctionArgument{"x", ValueType::Double}});
+      auto func =
+          generateFunctionPrototype(name, type, {FunctionArgument{"x", type}});
       _functions.define(name, func);
     }
   }
