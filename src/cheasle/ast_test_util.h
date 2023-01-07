@@ -15,6 +15,18 @@ public:
     return AST::make<ConstantValue>(value, loc);
   }
 
+  static inline AST constant(int value) {
+    return AST::make<ConstantValue>(static_cast<int32_t>(value), loc);
+  }
+
+  static inline AST constant(const char *value) {
+    return AST::make<ConstantValue>(std::string(value), loc);
+  }
+
+  static inline AST constant(std::string value) {
+    return AST::make<ConstantValue>(std::move(value), loc);
+  }
+
   static inline AST add(AST lhs, AST rhs) {
     return AST::make<BinaryExpression>(std::move(lhs), std::move(rhs),
                                        BinaryOperator::Add, loc);
@@ -219,13 +231,14 @@ public:
                                       std::vector<AST>{std::move(arg)}, loc);
   }
 
-  static inline AST printd(std::vector<AST> args) {
-    return AST::make<BuiltInFunction>(BuiltInFunctionId::Printd,
+  static inline AST printf(std::vector<AST> args) {
+    return AST::make<BuiltInFunction>(BuiltInFunctionId::Printf,
                                       std::move(args), loc);
   }
 
-  static inline AST printb(std::vector<AST> args) {
-    return AST::make<BuiltInFunction>(BuiltInFunctionId::Printb,
+  static inline AST printf(std::string format, std::vector<AST> args) {
+    args.insert(args.begin(), constant(format));
+    return AST::make<BuiltInFunction>(BuiltInFunctionId::Printf,
                                       std::move(args), loc);
   }
 
@@ -239,10 +252,17 @@ void requireAst(const AST &expected, const AST &actual);
 
 template <typename T> void requireType(const std::optional<Value> &val) {
   REQUIRE(val);
+  if (std::get_if<T>(&*val) == nullptr) {
+    std::cout << "Unexpected variant value: " << *val << std::endl;
+  }
   REQUIRE(std::get_if<T>(&*val) != nullptr);
 }
 
 #define REQUIRE_DOUBLE(val) requireType<double>((val))
 
 #define REQUIRE_BOOL(val) requireType<bool>((val))
+
+#define REQUIRE_STRING(val) requireType<std::string>((val))
+
+#define REQUIRE_INT(val) requireType<int32_t>((val))
 } // namespace cheasle

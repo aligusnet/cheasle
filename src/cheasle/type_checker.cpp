@@ -1,5 +1,6 @@
 #include "type_checker.h"
 #include "cheasle/ast.h"
+#include "cheasle/printf_utils.h"
 #include "cheasle/value.h"
 #include <cheasle/symbol.h>
 #include <cheasle/symbol_table.h>
@@ -99,6 +100,12 @@ public:
     } else if (std::get_if<bool>(&node.value) != nullptr) {
       node.type = ValueType::Boolean;
       return node.type;
+    } else if (std::get_if<std::string>(&node.value) != nullptr) {
+      node.type = ValueType::String;
+      return node.type;
+    } else if (std::get_if<int32_t>(&node.value) != nullptr) {
+      node.type = ValueType::Int;
+      return node.type;
     }
 
     error("Unable to obtain constant value type", node.location);
@@ -176,34 +183,38 @@ public:
       }
       node.type = ValueType::Double;
       return node.type;
-    case BuiltInFunctionId::Printd:
-      node.type = ValueType::Double;
+    case BuiltInFunctionId::Printf:
       if (node.arguments.size() == 0) {
-        error("Bultin function <printd> expects at least 1 argument",
+        error("Bultin function <printf> expects at least 1 argument",
               node.location);
+      } else {
+        auto formatType = node.arguments.front().visit(*this);
+        if (formatType != ValueType::String) {
+          error("Bultin function <printf> expects first argument to be string",
+                node.location);
+        }
 
-        return node.type;
-      }
-      for (auto &arg : node.arguments) {
-        if (arg.visit(*this) != ValueType::Double) {
-          error("Bultin function <printd> expects arguments of type double",
-                node.location);
+        std::vector<ValueType> argumentTypes;
+        // First argument is format string.
+        argumentTypes.reserve(node.arguments.size() - 1);
+        for (size_t i = 1; i < node.arguments.size(); ++i) {
+          argumentTypes.push_back(node.arguments[i].visit(*this));
+        }
+
+        // if the first argument is a constant string, we can check other
+        // argument types
+        if (node.arguments[0].is<ConstantValue>()) {
+          auto formatStringNode = node.arguments[0].cast<ConstantValue>();
+          if (formatStringNode->type == ValueType::String) {
+            auto errorMessage = printfCheckTypes(
+                std::get<std::string>(formatStringNode->value), argumentTypes);
+            if (!errorMessage.empty()) {
+              error("printf: " + errorMessage, node.location);
+            }
+          }
         }
       }
-      return node.type;
-    case BuiltInFunctionId::Printb:
-      node.type = ValueType::Boolean;
-      if (node.arguments.size() == 0) {
-        error("Bultin function <printb> expects at least 1 argument",
-              node.location);
-        return node.type;
-      }
-      for (auto &arg : node.arguments) {
-        if (arg.visit(*this) != ValueType::Boolean) {
-          error("Bultin function <printd> expects arguments of type bool",
-                node.location);
-        }
-      }
+      node.type = ValueType::Int;
       return node.type;
     }
 

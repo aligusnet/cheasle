@@ -27,6 +27,7 @@ add_library(CheasleLib STATIC
     type_checker.cpp
     llvm_codegen.cpp
     function_push_up.cpp
+    printf_utils.cpp
 )
 
 add_executable(cheasle_test

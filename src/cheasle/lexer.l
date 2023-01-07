@@ -54,12 +54,15 @@ float -?([0-9]*[.])?[0-9]+
 
 /* values */
 {float} { return cheasle::Parser::make_VALUE(atof(text()), location()); }
+\"(\\.|\"\"|[^"\n])*\" { return cheasle::Parser::make_VALUE(str().substr(1, size()-2), location()); }
+\"(\\.|[^"\n])*$    { cheasle::Parser::syntax_error(location(), std::string("Unterminated string ") + text()); }
 "true"  { return cheasle::Parser::make_VALUE(true, location()); }
 "false" { return cheasle::Parser::make_VALUE(false, location()); }
 
 /* data types */
 "bool" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Boolean, location()); }
 "double" { return cheasle::Parser::make_VALUE_TYPE(ValueType::Double, location()); }
+"string" { return cheasle::Parser::make_VALUE_TYPE(ValueType::String, location()); }
 
 /* keywords */
 "if"    { return cheasle::Parser::make_IF(location()); }
@@ -73,8 +76,7 @@ float -?([0-9]*[.])?[0-9]+
 "sqrt"  { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Sqrt, location()); }
 "exp"   { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Exp, location()); }
 "log"   { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Log, location()); }
-"printd" { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Printd, location()); }
-"printb" { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Printb, location()); }
+"printf" { return cheasle::Parser::make_BUILTIN(BuiltInFunctionId::Printf, location()); }
 
 /* names */
 [a-zA-Z][a-zA-Z0-9]*  { return cheasle::Parser::make_IDENTIFIER(text(), location()); }

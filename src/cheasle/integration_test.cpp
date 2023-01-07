@@ -11,18 +11,7 @@
 using Catch::Matchers::WithinRel;
 namespace cheasle {
 
-AST generateAST(const std::string &code, const std::string &testName,
-                bool trace) {
-  if (trace) {
-    std::cout << "********************************" << std::endl;
-    std::cout << "Building and executing program: " << std::endl;
-    std::cout << "--------------------------------" << std::endl;
-    std::cout << code;
-    std::cout << std::endl;
-  }
-
-  Lexer lexer(code);
-  lexer.filename = testName + ".che";
+AST generateAST(Lexer &lexer, bool trace) {
   Driver driver;
   Parser parser{lexer, &driver};
   auto parseResult = parser.parse();
@@ -102,7 +91,18 @@ template <> void validateResult<double>(double expected, double actual) {
 template <typename T>
 void runIntegrationTest(const std::string &code, const std::string &testName,
                         bool trace, T expected) {
-  auto ast = generateAST(code, testName, trace);
+  if (trace) {
+    std::cout << "********************************" << std::endl;
+    std::cout << "Building and executing program: " << std::endl;
+    std::cout << "--------------------------------" << std::endl;
+    std::cout << code;
+    std::cout << std::endl;
+  }
+
+  Lexer lexer(code);
+  lexer.filename = testName + ".che";
+
+  auto ast = generateAST(lexer, trace);
   {
     auto result = interpret<T>(ast, trace);
     validateResult(expected, result);

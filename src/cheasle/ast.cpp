@@ -222,11 +222,8 @@ std::ostream &operator<<(std::ostream &os, BuiltInFunctionId id) {
   case BuiltInFunctionId::Log:
     os << "log";
     break;
-  case BuiltInFunctionId::Printd:
-    os << "printd";
-    break;
-  case BuiltInFunctionId::Printb:
-    os << "printb";
+  case BuiltInFunctionId::Printf:
+    os << "printf";
     break;
   case BuiltInFunctionId::Sqrt:
     os << "sqrt";

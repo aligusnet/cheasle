@@ -336,42 +336,25 @@ TEST_CASE("builtin functions") {
     REQUIRE_THAT(std::get<double>(*result), WithinRel(7.3890560989, 1e-10));
   }
 
-  SECTION("printd") {
-    auto ast = TAST::builtin(BuiltInFunctionId::Printd,
-                             std::vector<AST>{TAST::constant(10.2),
-                                              TAST::constant(1.1),
-                                              TAST::constant(11.9)});
+  SECTION("printf") {
+    auto ast = TAST::printf(
+        "Hello: %f, %d, %A, %x",
+        std::vector<AST>{TAST::constant(10.1), TAST::constant(true),
+                         TAST::constant(931.799), TAST::constant(572)});
 
     std::ostringstream oss;
     ErrorList errors{};
     auto result = eval(ast, errors, oss);
 
-    REQUIRE_DOUBLE(result);
-    REQUIRE_THAT(std::get<double>(*result), WithinRel(11.9, 1e-10));
+    std::string expectedString =
+        "Hello: 10.100000, 1, 0X1.D1E645A1CAC08P+9, 572";
+    REQUIRE_INT(result);
+    REQUIRE(std::get<int32_t>(*result) == expectedString.size());
 
     REQUIRE_FALSE(errors.hasErrors());
 
     std::string output = oss.str();
-    REQUIRE_THAT(output, ContainsSubstring("10.2") &&
-                             ContainsSubstring("1.1") &&
-                             ContainsSubstring("11.9"));
-  }
-
-  SECTION("printb") {
-    auto ast = TAST::builtin(BuiltInFunctionId::Printb,
-                             std::vector<AST>{TAST::constant(true)});
-
-    std::ostringstream oss;
-    ErrorList errors{};
-    auto result = eval(ast, errors, oss);
-
-    REQUIRE_BOOL(result);
-    REQUIRE(std::get<bool>(*result) == true);
-
-    REQUIRE_FALSE(errors.hasErrors());
-
-    std::string output = oss.str();
-    REQUIRE_THAT(output, ContainsSubstring("true"));
+    REQUIRE(output == expectedString);
   }
 }
 

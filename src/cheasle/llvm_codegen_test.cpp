@@ -40,6 +40,13 @@ TEST_CASE("constant expression", "[llvm jit]") {
     auto result = compileAndRun<bool>(std::move(ast));
     REQUIRE(result == true);
   }
+
+  SECTION("string") {
+    auto ast = TAST::constant("Hey, LLVM!");
+    auto result = compileAndRun<std::string>(std::move(ast));
+
+    REQUIRE(result == std::string("Hey, LLVM!"));
+  }
 }
 
 TEST_CASE("binary expression", "[llvm jit]") {
@@ -132,18 +139,12 @@ TEST_CASE("builtin function", "[llvm jit]") {
     REQUIRE_THAT(result, WithinRel(log(10.0), 1e-8));
   }
 
-  SECTION("printd") {
-    auto ast = TAST::printd(
-        {TAST::constant(10.0), TAST::constant(20.0), TAST::constant(30.0)});
-    auto result = compileAndRun<double>(std::move(ast));
-    REQUIRE_THAT(result, WithinRel(30.0, 1e-8));
-  }
-
-  SECTION("printb") {
-    auto ast = TAST::printb(
-        {TAST::constant(false), TAST::constant(false), TAST::constant(true)});
-    auto result = compileAndRun<bool>(std::move(ast));
-    REQUIRE(result == true);
+  SECTION("printf") {
+    auto ast = TAST::printf("Hello: %.1f and %d\n",
+                            {TAST::constant(10.1), TAST::constant(true)});
+    std::string expectedString = "Hello: 10.1 and 1\n";
+    auto result = compileAndRun<int32_t>(std::move(ast));
+    REQUIRE(result == expectedString.size());
   }
 }
 
@@ -258,13 +259,26 @@ TEST_CASE("Logical expressions", "[llvm jit]") {
 }
 
 TEST_CASE("let and reference", "[llvm jit]") {
-  auto letAst = TAST::let("a", TAST::constant(10.0));
-  auto refAst = TAST::ref("a");
-  auto ast = TAST::b({letAst, refAst});
+  SECTION("double") {
+    auto letAst = TAST::let("a", TAST::constant(10.0));
+    auto refAst = TAST::ref("a");
+    auto ast = TAST::b({letAst, refAst});
 
-  auto result = compileAndRun<double>(ast);
+    auto result = compileAndRun<double>(ast);
 
-  REQUIRE_THAT(result, WithinRel(10.0, 1e-10));
+    REQUIRE_THAT(result, WithinRel(10.0, 1e-10));
+  }
+
+  SECTION("string") {
+    auto letAst =
+        TAST::let("a", ValueType::String, TAST::constant("Hello, LLVM!"));
+    auto refAst = TAST::ref("a");
+    auto ast = TAST::b({letAst, refAst});
+
+    auto result = compileAndRun<std::string>(ast);
+
+    REQUIRE(result == std::string("Hello, LLVM!"));
+  }
 }
 
 TEST_CASE("let, assign and reference", "[llvm jit]") {

@@ -213,13 +213,22 @@ TEST_CASE("bultin function call", "[parser]") {
     REQUIRE_AST(expected, ast);
   }
 
-  SECTION("print") {
-    std::string code = "printd(a, 10, b);";
+  SECTION("printf") {
+    std::string code = "printf(\"%d %f %d\", a, 10, b);";
     auto ast = parse(code);
 
-    auto expected =
-        TAST::printd({TAST::ref("a"), TAST::constant(10.0), TAST::ref("b")});
+    auto expected = TAST::printf(
+        "%d %f %d", {TAST::ref("a"), TAST::constant(10.0), TAST::ref("b")});
     REQUIRE_AST(expected, ast);
   }
 }
+
+TEST_CASE("string constant", "[parser]") {
+  std::string code = "\"String literal with \\\"escape\\\"\";";
+  auto ast = parse(code);
+
+  auto expected = TAST::b(TAST::constant("String literal with \\\"escape\\\""));
+  REQUIRE_AST(expected, ast);
+}
+
 } // namespace cheasle

@@ -22,43 +22,6 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-#include <stdarg.h>
-
-extern "C" double printd(int count, ...) {
-  double val;
-  va_list args;
-  va_start(args, count);
-  for (int i = 0; i < count; ++i) {
-    val = va_arg(args, double);
-    if (i != 0) {
-      std::cout << ' ';
-    }
-    std::cout << val;
-  }
-  va_end(args);
-
-  std::cout << std::endl;
-
-  return val;
-}
-
-extern "C" bool printb(int count, ...) {
-  int val;
-  va_list args;
-  va_start(args, count);
-  for (int i = 0; i < count; ++i) {
-    val = va_arg(args, int);
-    if (i != 0) {
-      std::cout << ' ';
-    }
-    std::cout << std::boolalpha << (val > 0);
-  }
-  va_end(args);
-
-  std::cout << std::endl;
-
-  return val > 0;
-}
 
 namespace cheasle {
 class CodeGenerator {
@@ -72,8 +35,7 @@ public:
     setBuiltinMathFunction("log");
     setBuiltinMathFunction("exp");
     setBuiltinMathFunction("fabs");
-    setBuiltinPrintFunction("printd", ValueType::Double);
-    setBuiltinPrintFunction("printb", ValueType::Boolean);
+    setBuiltinPrintfFunction();
   }
 
   llvm::Value *operator()(const AST &, const BinaryExpression &node) {
@@ -220,16 +182,25 @@ public:
   }
 
   llvm::Value *operator()(const AST &, const ConstantValue &node) {
-    if (std::get_if<bool>(&node.value) != nullptr) {
+    switch (node.type) {
+    case ValueType::Boolean:
       return llvm::ConstantInt::getBool(_context, std::get<bool>(node.value));
-    } else if (std::get_if<double>(&node.value) != nullptr) {
+    case ValueType::Double:
       return llvm::ConstantFP::get(_context,
                                    llvm::APFloat(std::get<double>(node.value)));
-    } else {
-      error("Unknown type of ConstantValue", node.location);
+    case ValueType::String:
+      return _builder.CreateGlobalString(std::get<std::string>(node.value), "",
+                                         0, &_module);
+    case ValueType::Int:
+      return llvm::Constant::getIntegerValue(
+          getLlvmType(node.type), llvm::APSInt(std::get<int32_t>(node.value)));
+    case ValueType::Function:
+      error("Cannot create a value of type function", node.location);
+      return nullptr;
+    case ValueType::Any:
+      error("Cannot create a value of type Any", node.location);
+      return nullptr;
     }
-
-    return nullptr;
   }
 
   llvm::Value *operator()(const AST &, const Block &node) {
@@ -273,7 +244,8 @@ public:
     }
 
     _builder.CreateBr(mergeBlock);
-    // Update then block pointer in case if codegen chaged the current block.
+    // Update then block pointer in case if codegen chaged the current
+    // block.
     thenBlock = _builder.GetInsertBlock();
 
     // Emit else block.
@@ -285,7 +257,8 @@ public:
     }
 
     _builder.CreateBr(mergeBlock);
-    // Update else block pointer in case if codegen chaged the current block.
+    // Update else block pointer in case if codegen chaged the current
+    // block.
     elseBlock = _builder.GetInsertBlock();
 
     if (thenValue->getType() != elseValue->getType()) {
@@ -349,10 +322,8 @@ public:
       return callFunction("exp", node.arguments, node.location);
     case BuiltInFunctionId::Log:
       return callFunction("log", node.arguments, node.location);
-    case BuiltInFunctionId::Printd:
-      return callPrint("printd", node.arguments, node.location);
-    case BuiltInFunctionId::Printb:
-      return callPrint("printb", node.arguments, node.location);
+    case BuiltInFunctionId::Printf:
+      return callPrintf(node.arguments, node.location);
     }
 
     error("BuiltInFunction is not implemented", node.location);
@@ -469,6 +440,10 @@ private:
     case ValueType::Function:
       error("Unsupported type Function", location());
       return nullptr;
+    case ValueType::String:
+      return llvm::Type::getInt8PtrTy(_context);
+    case ValueType::Int:
+      return llvm::Type::getInt32Ty(_context);
     }
   }
 
@@ -503,23 +478,25 @@ private:
     }
   }
 
-  void setBuiltinPrintFunction(const std::string &name, ValueType valueType) {
+  void setBuiltinPrintfFunction() {
+    std::string name = "printf";
     auto optFunc = _functions.get(name);
     if (!optFunc) {
-      std::vector<llvm::Type *> argTypes{llvm::Type::getInt32Ty(_context)};
-      auto *functionType = llvm::FunctionType::get(getLlvmType(valueType),
-                                                   argTypes, /*isVarArg*/ true);
+      std::vector<llvm::Type *> argTypes{llvm::Type::getInt8PtrTy(_context)};
+      auto *functionType = llvm::FunctionType::get(
+          llvm::Type::getInt32Ty(_context), argTypes, /*isVarArg*/ true);
       auto *function = llvm::Function::Create(
           functionType, llvm::Function::ExternalLinkage, name, _module);
       _functions.define(name, function);
       for (auto &arg : function->args()) {
-        arg.setName("count");
+        arg.setName("format");
       }
     }
   }
 
-  llvm::Value *callPrint(const std::string &name,
-                         const std::vector<AST> &arguments, location location) {
+  llvm::Value *callPrintf(const std::vector<AST> &arguments,
+                          location location) {
+    std::string name = "printf";
     auto optFunction = _functions.get(name);
     if (!optFunction || *optFunction == nullptr) {
       error("Function <" + name + "> is unknown", location);
@@ -528,9 +505,7 @@ private:
 
     auto function = *optFunction;
     std::vector<llvm::Value *> argValues{};
-    argValues.reserve(arguments.size() + 1);
-    argValues.emplace_back(llvm::ConstantInt::getSigned(
-        llvm::Type::getInt32Ty(_context), arguments.size()));
+    argValues.reserve(arguments.size());
     for (const auto &arg : arguments) {
       argValues.push_back(arg.visit(*this));
       if (argValues.back() == nullptr) {
@@ -630,6 +605,10 @@ Value callEntryPoint(llvm::JITTargetAddress address, ValueType returnType) {
     return callEntryPoint<bool>(address);
   case ValueType::Double:
     return callEntryPoint<double>(address);
+  case ValueType::Int:
+    return callEntryPoint<int32_t>(address);
+  case ValueType::String:
+    return callEntryPoint<char *>(address);
   case ValueType::Any:
     break;
   case ValueType::Function:

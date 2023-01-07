@@ -16,7 +16,7 @@ def fibonacci(n: double): double {
     }
   }
 }
-printd( fibonacci(21) );
+printf("%f\n", fibonacci(21) );
 ```
 
 ### Square root
@@ -33,7 +33,7 @@ def mySqrt(n: double) : double {
   }
 }
 const arg: double = 171;
-printd( mySqrt(arg) - sqrt(arg) );
+printf("%f\n", mySqrt(arg) - sqrt(arg) );
 ```
 
 ### Logical expressions
@@ -51,7 +51,7 @@ const begin: double = 5.0;
 const end: double = 10.0;
 const val: double = 7.0;
 
-printb( within1(begin, end, val) and within2(begin, end, val) );
+printf("%d\n", within1(begin, end, val) and within2(begin, end, val) );
 ```
 
 ## Pre requirements

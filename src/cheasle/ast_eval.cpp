@@ -1,7 +1,9 @@
 #include "ast_eval.h"
 #include "cheasle/ast.h"
+#include "cheasle/printf_utils.h"
 #include "cheasle/symbol.h"
 #include "cheasle/symbol_table.h"
+#include "cheasle/value.h"
 #include "location.h"
 #include <optional>
 #include <sstream>
@@ -230,12 +232,10 @@ public:
       return callExp(node.arguments, node.location);
     case BuiltInFunctionId::Log:
       return callLog(node.arguments, node.location);
-    case BuiltInFunctionId::Printd:
-      return callPrint(node.arguments, node.location);
-    case BuiltInFunctionId::Printb:
-      return callPrint(node.arguments, node.location);
     case BuiltInFunctionId::Sqrt:
       return callSqrt(node.arguments, node.location);
+    case BuiltInFunctionId::Printf:
+      return callPrintf(node.arguments, node.location);
     }
 
     error("Unknown builtin function", node.location);
@@ -366,21 +366,47 @@ public:
     return std::nullopt;
   }
 
-  std::optional<Value> callPrint(const std::vector<AST> arguments,
-                                 const location &location) {
-    std::optional<Value> value = 0.0;
-    _os << "out:";
-    for (const auto &arg : arguments) {
-      value = arg.visit(*this);
-      if (!value) {
-        return std::nullopt;
-      }
-      _os << ' ' << *value;
+  std::optional<Value> callPrintf(const std::vector<AST> arguments,
+                                  const location &location) {
+    // Naive implementation of printf.
+    if (arguments.size() == 0) {
+      error("Printf expects at least one argument of type string", location);
+      return -1;
     }
 
-    _os << std::endl;
+    auto formatVar = arguments.front().visit(*this);
+    if (!formatVar) {
+      return -1;
+    }
 
-    return value;
+    if (std::get_if<std::string>(&*formatVar) == nullptr) {
+      error("First argument of printf is expected to be string", location);
+      return -1;
+    }
+
+    std::stringstream os;
+    std::string format = std::get<std::string>(*formatVar);
+    std::vector<Value> argValues;
+    argValues.reserve(arguments.size() -
+                      1); // first argument is always format string
+    for (size_t i = 1; i < arguments.size(); ++i) {
+      auto argValue = arguments[i].visit(*this);
+      if (!argValue) {
+        return -1;
+      }
+      argValues.emplace_back(std::move(*argValue));
+    }
+
+    auto result = printfImpl(os, format, argValues);
+    if (result.first != 0) {
+      error(result.second, location);
+      return result.first;
+    }
+
+    std::string outputString = os.str();
+    _os << outputString;
+
+    return static_cast<int32_t>(outputString.size());
   }
 
   std::optional<Value> callSqrt(const std::vector<AST> arguments,

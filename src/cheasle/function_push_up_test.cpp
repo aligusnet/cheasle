@@ -67,7 +67,8 @@ TEST_CASE("complext logical expression", "[function-push-up]") {
 TEST_CASE("builtin function call", "[function-push-up]") {
   auto arg1 = TAST::orexp(TAST::gt(10.0, 11.0), TAST::eq(true, false));
   auto arg2 = TAST::orexp(TAST::le(10.0, 11.0), TAST::ne(11.0, 11.0));
-  auto ast = TAST::printb(std::vector<AST>{std::move(arg1), std::move(arg2)});
+  auto ast =
+      TAST::printf("", std::vector<AST>{std::move(arg1), std::move(arg2)});
 }
 
 TEST_CASE("nested user functions", "[function-push-up]") {

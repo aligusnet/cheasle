@@ -275,40 +275,58 @@ TEST_CASE("while..do expression", "[type-checker]") {
 }
 
 TEST_CASE("buuiltin functions", "[type-checker]") {
-  SECTION("printd(double, double)") {
-    auto ast = TAST::printd({TAST::constant(10.0), TAST::constant(12.0)});
+  SECTION("printf(string, double, double)") {
+    auto ast = TAST::printf(
+        {TAST::constant("%f %f"), TAST::constant(10.0), TAST::constant(12.0)});
     auto type = checkTypes(ast);
-    REQUIRE(type == ValueType::Double);
+    REQUIRE(type == ValueType::Int);
   }
 
-  SECTION("printd(double, bool)") {
-    auto ast = TAST::printd({TAST::constant(10.0), TAST::constant(true)});
+  SECTION("printf(double, bool)") {
+    auto ast = TAST::printf({TAST::constant(10.0), TAST::constant(true)});
     auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Double);
+    REQUIRE(type == ValueType::Int);
   }
 
-  SECTION("printd()") {
-    auto ast = TAST::printd({});
+  SECTION("printf()") {
+    auto ast = TAST::printf({});
     auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Double);
+    REQUIRE(type == ValueType::Int);
   }
 
-  SECTION("printb(bool, bool)") {
-    auto ast = TAST::printb({TAST::constant(true), TAST::constant(false)});
+  SECTION("printf(string, bool, bool)") {
+    auto ast = TAST::printf(
+        {TAST::constant("%d %d"), TAST::constant(true), TAST::constant(false)});
     auto type = checkTypes(ast);
-    REQUIRE(type == ValueType::Boolean);
+    REQUIRE(type == ValueType::Int);
   }
 
-  SECTION("printd(double, bool)") {
-    auto ast = TAST::printb({TAST::constant(10.0), TAST::constant(true)});
-    auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Boolean);
+  SECTION("printf(string, double, bool)") {
+    auto ast = TAST::printf(
+        {TAST::constant("%f %d"), TAST::constant(10.0), TAST::constant(true)});
+    auto type = checkTypes(ast);
+    REQUIRE(type == ValueType::Int);
   }
 
-  SECTION("printb()") {
-    auto ast = TAST::printb({});
+  SECTION("printf() wrong argument types") {
+    auto ast = TAST::printf(
+        {TAST::constant("%d %d"), TAST::constant(10.0), TAST::constant(true)});
     auto type = checkTypesWithErrors(ast);
-    REQUIRE(type == ValueType::Boolean);
+    REQUIRE(type == ValueType::Int);
+  }
+
+  SECTION("printf() not enough arguments") {
+    auto ast = TAST::printf({TAST::constant("%f %d %d"), TAST::constant(10.0),
+                             TAST::constant(true)});
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Int);
+  }
+
+  SECTION("printf() too many arguments") {
+    auto ast = TAST::printf(
+        {TAST::constant("%d"), TAST::constant(10.0), TAST::constant(true)});
+    auto type = checkTypesWithErrors(ast);
+    REQUIRE(type == ValueType::Int);
   }
 
   SECTION("sqrt(double)") {
